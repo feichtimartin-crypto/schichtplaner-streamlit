@@ -40,9 +40,19 @@ def add_mitarbeiter(name):
         data["mitarbeiter"].append(name)
         save_data(data)
 
+def remove_mitarbeiter(name):
+    if name in data["mitarbeiter"]:
+        data["mitarbeiter"].remove(name)
+        save_data(data)
+
 def add_arbeit(arbeit):
     if arbeit and arbeit not in data["arbeiten"]:
         data["arbeiten"].append(arbeit)
+        save_data(data)
+
+def remove_arbeit(arbeit):
+    if arbeit in data["arbeiten"]:
+        data["arbeiten"].remove(arbeit)
         save_data(data)
 
 def generiere_plan():
@@ -142,29 +152,53 @@ with tab1:
 
 
 # ============================================================
-#  👥 TAB 2 – Verwaltung
+#  👥 TAB 2 – Verwaltung (NEU mit Entfernen)
 # ============================================================
 
 with tab2:
     st.header("👥 Mitarbeiter & Arbeiten")
     col1, col2 = st.columns(2)
 
-    # --- Mitarbeiter hinzufügen ---
+    # --- Mitarbeiter hinzufügen/entfernen ---
     with col1:
-        name = st.text_input("Mitarbeiter hinzufügen")
-        if st.button("➕ Mitarbeiter hinzufügen"):
+        st.subheader("👩‍💼 Mitarbeiter verwalten")
+
+        name = st.text_input("Neuen Mitarbeiter hinzufügen")
+        if st.button("➕ Hinzufügen"):
             add_mitarbeiter(name)
-            st.rerun()  # <— fix für neuen Streamlit-Standard
-        st.markdown("### 👩‍💼 Aktuell:")
+            st.rerun()
+
+        if data["mitarbeiter"]:
+            selected = st.selectbox("Mitarbeiter entfernen", ["– auswählen –"] + data["mitarbeiter"])
+            if selected != "– auswählen –" and st.button("❌ Entfernen"):
+                remove_mitarbeiter(selected)
+                st.success(f"{selected} entfernt")
+                st.rerun()
+        else:
+            st.info("Noch keine Mitarbeiter vorhanden.")
+
+        st.markdown("### Aktuelle Mitarbeiter:")
         st.write(", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_Keine_")
 
-    # --- Arbeiten hinzufügen ---
+    # --- Arbeiten hinzufügen/entfernen ---
     with col2:
-        arbeit = st.text_input("Arbeit/Schicht hinzufügen")
-        if st.button("➕ Arbeit hinzufügen"):
+        st.subheader("🧰 Arbeiten / Schichten verwalten")
+
+        arbeit = st.text_input("Neue Arbeit/Schicht hinzufügen")
+        if st.button("➕ Arbeit speichern"):
             add_arbeit(arbeit)
             st.rerun()
-        st.markdown("### 🧰 Aktuell:")
+
+        if data["arbeiten"]:
+            selected_work = st.selectbox("Arbeit löschen", ["– auswählen –"] + data["arbeiten"])
+            if selected_work != "– auswählen –" and st.button("❌ Arbeit entfernen"):
+                remove_arbeit(selected_work)
+                st.success(f"{selected_work} entfernt")
+                st.rerun()
+        else:
+            st.info("Noch keine Arbeiten vorhanden.")
+
+        st.markdown("### Aktuelle Arbeiten:")
         st.write(", ".join(data["arbeiten"]) if data["arbeiten"] else "_Keine_")
 
 
