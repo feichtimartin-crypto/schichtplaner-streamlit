@@ -6,22 +6,29 @@ from pathlib import Path
 from collections import defaultdict, Counter
 import pandas as pd
 
+
 # ============================================================
-#  🔸 Datenverwaltung
+#  🔸 KONSTANTEN & INITIALISIERUNG
 # ============================================================
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
+ADMIN_PASSWORD = "Nikolajistcoll"  # 🔐 Passwortschutz für Verwaltung
+
+
+# ============================================================
+#  🔹 DATENVERWALTUNG
+# ============================================================
 
 def load_data():
-    """Lade lokale JSON-Datei oder erzeuge Grundstruktur"""
+    """Lädt gespeicherte Daten oder erstellt neue Basisstruktur."""
     if DATA_FILE.exists():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {
         "mitarbeiter": [],
         "arbeiten": [],
-        "eintraege": []  # {"date": "...", "plan": [(arbeit, person), ...]}
+        "eintraege": []  # {"date": "YYYY-MM-DD", "plan": [(arbeit, person), ...]}
     }
 
 def save_data(data):
@@ -30,8 +37,9 @@ def save_data(data):
 
 data = load_data()
 
+
 # ============================================================
-#  🔹 Hilfsfunktionen
+#  ⚙️  FUNKTIONEN
 # ============================================================
 
 def add_mitarbeiter(name):
@@ -55,14 +63,14 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 def generiere_plan():
-    """Erstellt einen fairen Schichtplan aus aktueller Historie"""
+    """Erstellt einen fairen Schichtplan auf Basis der bisherigen Historie."""
     mitarbeiter = data["mitarbeiter"]
     arbeiten = data["arbeiten"]
     if not mitarbeiter or not arbeiten:
         st.warning("Bitte zuerst Mitarbeiter und Arbeiten hinzufügen!")
         return None
 
-    # Zähldaten aus Historie
+    # Zähldaten (wer wie oft was gemacht hat)
     count = defaultdict(lambda: defaultdict(int))
     for eintrag in data["eintraege"]:
         for arbeit, person in eintrag["plan"]:
@@ -71,30 +79,28 @@ def generiere_plan():
     verfuegbar = mitarbeiter.copy()
     random.shuffle(verfuegbar)
     plan = []
-
     for arbeit in arbeiten:
         if not verfuegbar:
             verfuegbar = mitarbeiter.copy()
+
         kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
         min_count = count[kandidaten[0]][arbeit]
         beste = [k for k in kandidaten if count[k][arbeit] == min_count]
         person = random.choice(beste)
         plan.append((arbeit, person))
         verfuegbar.remove(person)
-
     return plan
 
 def plan_speichern(plan):
-    if not plan:
-        return
-    data["eintraege"].append({
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "plan": plan
-    })
-    save_data(data)
+    if plan:
+        data["eintraege"].append({
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "plan": plan
+        })
+        save_data(data)
 
 def get_recent_entries(weeks=8):
-    """Liefert nur Einträge der letzten n Wochen"""
+    """Liefert Einträge der letzten Wochen."""
     cutoff = datetime.now() - timedelta(weeks=weeks)
     ergebnis = []
     for eintrag in data["eintraege"]:
@@ -102,97 +108,103 @@ def get_recent_entries(weeks=8):
             d = datetime.strptime(eintrag["date"], "%Y-%m-%d")
             if d >= cutoff:
                 ergebnis.append(eintrag)
-        except ValueError:
+        except Exception:
             continue
     return ergebnis
 
-def berechne_statistik_zeitraum(weeks=8):
-    """Zählt Einsätze im angegebenen Zeitraum"""
-    zeitraum = get_recent_entries(weeks=weeks)
+def statistik_wochen(weeks=8):
+    """Zählt, wie oft jede Person welche Arbeit im Zeitraum gemacht hat."""
+    zeitraum = get_recent_entries(weeks)
     statistik = defaultdict(lambda: Counter())
     for eintrag in zeitraum:
         for arbeit, person in eintrag["plan"]:
             statistik[person][arbeit] += 1
     return statistik
 
+
 # ============================================================
-#  🎨 Streamlit UI
+#  🎨 STREAMLIT-Oberfläche
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Schichtplan", "👥 Verwaltung", "📊 Statistik (8 Wochen)"])
+tab1, tab2, tab3 = st.tabs(["📋 Schichtplan", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
+
 
 # ============================================================
-#  📋 TAB 1 – Planerstellung (übersichtlicher)
+# 1️⃣  TAB – SCHICHTPLAN
 # ============================================================
 
 with tab1:
-    st.header("📋 Schichtplan-Erstellung")
+    st.header("📅 Schichtplan erstellen")
 
     if st.button("🔄 Neuen Plan generieren"):
         plan = generiere_plan()
         if plan:
             st.session_state["plan"] = plan
-            st.success("✅ Plan wurde erstellt!")
+            st.success("✅ Neuer Plan erfolgreich erstellt!")
 
     plan = st.session_state.get("plan", None)
-    if plan:
-        st.subheader(f"📅 Aktueller Plan ({datetime.now().strftime('%d.%m.%Y')})")
 
-        # Darstellung als Tabelle
+    if plan:
+        st.subheader(f"Aktueller Plan – {datetime.now().strftime('%d.%m.%Y')}")
         df_plan = pd.DataFrame(plan, columns=["Arbeit", "Mitarbeiter"])
         st.dataframe(df_plan, use_container_width=True, hide_index=True)
 
         st.markdown("---")
         if st.button("💾 Plan speichern"):
             plan_speichern(plan)
-            st.success("📦 Plan gespeichert und in Historie übernommen!")    
+            st.success("📦 Plan gespeichert und in die Historie aufgenommen.")
     else:
-        st.info("Noch kein Plan erstellt. Klicke oben auf „Neuen Plan generieren“.")
+        st.info("Noch kein Plan vorhanden. Erstelle zuerst einen neuen.")
 
 
 # ============================================================
-#  👥 TAB 2 – Verwaltung
+# 2️⃣  TAB – VERWALTUNG (PASSWORTGESCHÜTZT)
 # ============================================================
 
 with tab2:
-    st.header("👥 Mitarbeiter & Arbeiten verwalten")
+    st.header("🔒 Verwaltung – Geschützter Bereich")
+
+    password = st.text_input("Passwort eingeben:", type="password")
+    if password != ADMIN_PASSWORD:
+        st.warning("🚫 Zugriff verweigert – falsches Passwort oder kein Passwort eingegeben.")
+        st.stop()
+
+    st.success("✅ Zugriff gewährt – willkommen im Verwaltungsbereich!")
     col1, col2 = st.columns(2)
 
-    # --- Mitarbeiter hinzufügen/entfernen ---
+    # --- Mitarbeiter hinzufügen / löschen ---
     with col1:
-        st.subheader("👤 Mitarbeiter")
-        name = st.text_input("Neuer Mitarbeiter:")
-        if st.button("➕ Hinzufügen", key="add_person"):
+        st.subheader("👤 Mitarbeiter verwalten")
+        name = st.text_input("Neuen Mitarbeiter hinzufügen:")
+        if st.button("➕ Mitarbeiter speichern"):
             add_mitarbeiter(name)
             st.rerun()
 
         if data["mitarbeiter"]:
-            selected = st.selectbox("Mitarbeiter löschen:", ["– auswählen –"] + data["mitarbeiter"])
-            if selected != "– auswählen –" and st.button("❌ Entfernen", key="remove_person"):
+            selected = st.selectbox("Mitarbeiter entfernen:", ["– auswählen –"] + data["mitarbeiter"])
+            if selected != "– auswählen –" and st.button("❌ Mitarbeiter löschen"):
                 remove_mitarbeiter(selected)
-                st.success(f"{selected} entfernt")
                 st.rerun()
         else:
             st.info("Noch keine Mitarbeiter.")
 
         st.markdown("**Aktuell:** " + ", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_leer_")
 
-    # --- Arbeiten hinzufügen/entfernen ---
+    # --- Arbeiten hinzufügen / löschen ---
     with col2:
-        st.subheader("🧰 Arbeiten / Schichten")
-        arbeit = st.text_input("Neue Arbeit / Schicht:")
-        if st.button("➕ Hinzufügen", key="add_work"):
+        st.subheader("🧰 Arbeiten / Schichten verwalten")
+        arbeit = st.text_input("Neue Arbeit hinzufügen:")
+        if st.button("➕ Arbeit speichern"):
             add_arbeit(arbeit)
             st.rerun()
 
         if data["arbeiten"]:
-            selected_work = st.selectbox("Arbeit entfernen:", ["– auswählen –"] + data["arbeiten"])
-            if selected_work != "– auswählen –" and st.button("❌ Entfernen", key="remove_work"):
-                remove_arbeit(selected_work)
-                st.success(f"{selected_work} entfernt")
+            selected_arbeit = st.selectbox("Arbeit löschen:", ["– auswählen –"] + data["arbeiten"])
+            if selected_arbeit != "– auswählen –" and st.button("❌ Arbeit löschen"):
+                remove_arbeit(selected_arbeit)
                 st.rerun()
         else:
             st.info("Noch keine Arbeiten.")
@@ -201,21 +213,21 @@ with tab2:
 
 
 # ============================================================
-#  📈 TAB 3 – 8-Wochen-Historie
+# 3️⃣  TAB – STATISTIK (8-WOCHEN)
 # ============================================================
 
 with tab3:
-    st.header("📊 Statistik der letzten 8 Wochen")
+    st.header("📊 Schicht-Statistik – letzte 8 Wochen")
 
-    statistik = berechne_statistik_zeitraum(weeks=8)
+    statistik = statistik_wochen(8)
     if not statistik:
-        st.info("Noch keine gespeicherten Pläne in den letzten 8 Wochen.")
+        st.info("ℹ️ Noch keine Pläne in den letzten 8 Wochen gespeichert.")
     else:
         for person, daten in statistik.items():
-            st.markdown(f"### 👤 {person}")
-            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Häufigkeit"])
-            df = df.sort_values(by="Häufigkeit", ascending=False)
-            st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.subheader(f"👤 {person}")
+            df_stat = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
+            df_stat = df_stat.sort_values(by="Anzahl", ascending=False)
+            st.bar_chart(df_stat.set_index("Arbeit"))
+            st.dataframe(df_stat, use_container_width=True, hide_index=True)
 
-    st.markdown("📅 Zeitraum: letzte **8 Wochen** werden berücksichtigt.")
+    st.markdown("📅 Betrachteter Zeitraum: **8 Wochen**")
