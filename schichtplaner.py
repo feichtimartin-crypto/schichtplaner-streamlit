@@ -94,7 +94,7 @@ def plan_speichern(plan):
     })
     save_data(data)
 
-def get_recent_entries(weeks=4):
+def get_recent_entries(weeks=8):
     """Liefert nur Einträge der letzten n Wochen"""
     cutoff = datetime.now() - timedelta(weeks=weeks)
     ergebnis = []
