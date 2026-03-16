@@ -7,13 +7,14 @@ from collections import defaultdict, Counter
 import pandas as pd
 
 # ============================================================
-#  🔸 DATENVERWALTUNG
+#  🔸 Datenverwaltung
 # ============================================================
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
 
 def load_data():
+    """Lade lokale JSON-Datei oder erzeuge Grundstruktur"""
     if DATA_FILE.exists():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -29,8 +30,9 @@ def save_data(data):
 
 data = load_data()
 
+
 # ============================================================
-#  🔹 HILFSFUNKTIONEN
+#  🔹 Hilfsfunktionen
 # ============================================================
 
 def add_mitarbeiter(name):
@@ -50,7 +52,7 @@ def generiere_plan():
         st.warning("Bitte zuerst Mitarbeiter und Arbeiten hinzufügen!")
         return None
 
-    # Zählt globale Historie für faire Verteilung
+    # Häufigkeiten aus der Historie berechnen (für faire Zuordnung)
     count = defaultdict(lambda: defaultdict(int))
     for eintrag in data["eintraege"]:
         for arbeit, person in eintrag["plan"]:
@@ -63,18 +65,19 @@ def generiere_plan():
     for arbeit in arbeiten:
         if not verfuegbar:
             verfuegbar = mitarbeiter.copy()
-        kandidaten = sorted(
-            verfuegbar, key=lambda p: count[p][arbeit]
-        )
+
+        kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
         min_count = count[kandidaten[0]][arbeit]
         beste = [k for k in kandidaten if count[k][arbeit] == min_count]
         person = random.choice(beste)
         plan.append((arbeit, person))
         verfuegbar.remove(person)
+
     return plan
 
 def plan_speichern(plan):
-    if not plan: return
+    if not plan:
+        return
     data["eintraege"].append({
         "date": datetime.now().strftime("%Y-%m-%d"),
         "plan": plan
@@ -82,16 +85,20 @@ def plan_speichern(plan):
     save_data(data)
 
 def get_recent_entries(weeks=4):
-    """liefert nur Einträge der letzten 4 Wochen"""
+    """Liefert nur Einträge der letzten n Wochen"""
     cutoff = datetime.now() - timedelta(weeks=weeks)
     ergebnis = []
     for eintrag in data["eintraege"]:
-        d = datetime.strptime(eintrag["date"], "%Y-%m-%d")
-        if d >= cutoff:
-            ergebnis.append(eintrag)
+        try:
+            d = datetime.strptime(eintrag["date"], "%Y-%m-%d")
+            if d >= cutoff:
+                ergebnis.append(eintrag)
+        except ValueError:
+            continue
     return ergebnis
 
 def berechne_4wochen_statistik():
+    """Zählt alle Einsätze der letzten 4 Wochen pro Person & Tätigkeit"""
     zeitraum = get_recent_entries(weeks=4)
     statistik = defaultdict(lambda: Counter())
     for eintrag in zeitraum:
@@ -99,18 +106,24 @@ def berechne_4wochen_statistik():
             statistik[person][arbeit] += 1
     return statistik
 
+
 # ============================================================
-#  🎨 STREAMLIT UI
+#  🎨 Streamlit UI
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Schichtplan", "👥 Verwaltung", "📈 Statistik (4 Wochen)"])
+tab1, tab2, tab3 = st.tabs(["📋 Schichtplan", "👥 Verwaltung", "📈 Statistik (4 Wochen)"])
 
-# ---------------- TAB 1 ----------------
+
+# ============================================================
+#  🧩 TAB 1 – Planerstellung
+# ============================================================
+
 with tab1:
     st.header("📋 Plan erstellen")
+
     if st.button("🔄 Neuen Plan generieren"):
         plan = generiere_plan()
         if plan:
@@ -127,33 +140,44 @@ with tab1:
             plan_speichern(plan)
             st.success("Plan gespeichert ✅")
 
-# ---------------- TAB 2 ----------------
+
+# ============================================================
+#  👥 TAB 2 – Verwaltung
+# ============================================================
+
 with tab2:
     st.header("👥 Mitarbeiter & Arbeiten")
     col1, col2 = st.columns(2)
+
+    # --- Mitarbeiter hinzufügen ---
     with col1:
         name = st.text_input("Mitarbeiter hinzufügen")
         if st.button("➕ Mitarbeiter hinzufügen"):
             add_mitarbeiter(name)
-            st.experimental_rerun()
+            st.rerun()  # <— fix für neuen Streamlit-Standard
         st.markdown("### 👩‍💼 Aktuell:")
         st.write(", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_Keine_")
 
+    # --- Arbeiten hinzufügen ---
     with col2:
         arbeit = st.text_input("Arbeit/Schicht hinzufügen")
         if st.button("➕ Arbeit hinzufügen"):
             add_arbeit(arbeit)
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("### 🧰 Aktuell:")
         st.write(", ".join(data["arbeiten"]) if data["arbeiten"] else "_Keine_")
 
-# ---------------- TAB 3 ----------------
+
+# ============================================================
+#  📈 TAB 3 – 4-Wochen-Historie
+# ============================================================
+
 with tab3:
-    st.header("📈 4‑Wochen‑Statistik")
+    st.header("📈 Statistik der letzten 4 Wochen")
 
     statistik = berechne_4wochen_statistik()
     if not statistik:
-        st.info("Noch keine Einträge in den letzten 4 Wochen.")
+        st.info("Noch keine Einträge in den letzten 4 Wochen.")
     else:
         for person, daten in statistik.items():
             df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
@@ -161,4 +185,3 @@ with tab3:
             st.dataframe(df, use_container_width=True)
 
     st.markdown("📅 Betrachteter Zeitraum: letzte 4 Wochen")
-
