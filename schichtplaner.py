@@ -14,7 +14,6 @@ DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
 ADMIN_PASSWORD = "Nikolajistcoll"
 
-# 👉 Neue Default-Arbeiten (inkl. Wareneingang)
 DEFAULT_ARBEITEN = [
     "Teamlead",
     "S3",
@@ -27,7 +26,6 @@ DEFAULT_ARBEITEN = [
     "Door´s Tugger"
 ]
 
-# 👉 Vorgaben Min / Max
 DEFAULT_MIN = {
     "Teamlead": 1,
     "S3": 1,
@@ -43,7 +41,7 @@ DEFAULT_MIN = {
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 999,  # quasi kein Limit
+    "Bahnhof": 999,
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
@@ -75,11 +73,9 @@ def save_data(data):
 
 data = load_data()
 
-# 👉 Arbeiten automatisch setzen (nur wenn leer)
 if not data["arbeiten"]:
     data["arbeiten"] = DEFAULT_ARBEITEN.copy()
 
-# Sicherheits-Upgrade für alte Daten
 if "feste_positionen" not in data:
     data["feste_positionen"] = {}
 if "mindest_besetzung" not in data:
@@ -87,12 +83,10 @@ if "mindest_besetzung" not in data:
 if "max_besetzung" not in data:
     data["max_besetzung"] = {}
 
-# 👉 Default Min setzen (nur wenn nicht vorhanden)
 for arbeit, val in DEFAULT_MIN.items():
     if arbeit not in data["mindest_besetzung"]:
         data["mindest_besetzung"][arbeit] = val
 
-# 👉 Default Max setzen
 for arbeit, val in DEFAULT_MAX.items():
     if arbeit not in data["max_besetzung"]:
         data["max_besetzung"][arbeit] = val
@@ -131,7 +125,6 @@ def remove_arbeit(arbeit):
 # ============================================================
 
 def generiere_plan(zeitraum_label):
-    """Erstellt einen fairen Schichtplan, berücksichtigt Abwesenheiten."""
     mitarbeiter = data["mitarbeiter"]
     arbeiten = data["arbeiten"]
 
@@ -144,44 +137,35 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
-    # 1️⃣ Feste Zuordnungen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # 2️⃣ Historie für faire Verteilung
     count = defaultdict(lambda: defaultdict(int))
     for e in data["eintraege"]:
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # 3️⃣ Restliche Arbeiten auffüllen
     for arbeit in arbeiten:
         aktuelle = [p for a, p in plan if a == arbeit]
 
-        min_soll = data.get("mindest_besetzung", {}).get(arbeit, 1)
-        max_soll = data.get("max_besetzung", {}).get(arbeit, min_soll)
+        min_soll = data["mindest_besetzung"].get(arbeit, 1)
+        max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
-        # Mindest erfüllen
-        benoetigt = max(0, min_soll - len(aktuelle))
-
-        for _ in range(benoetigt):
+        # Mindest
+        for _ in range(max(0, min_soll - len(aktuelle))):
             if not verfuegbar:
                 break
             kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
-            min_count = count[kandidaten[0]][arbeit]
-            beste = [k for k in kandidaten if count[k][arbeit] == min_count]
-            person = random.choice(beste)
+            person = random.choice(kandidaten)
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
         # Max auffüllen
         while len([p for a, p in plan if a == arbeit]) < max_soll and verfuegbar:
             kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
-            min_count = count[kandidaten[0]][arbeit]
-            beste = [k for k in kandidaten if count[k][arbeit] == min_count]
-            person = random.choice(beste)
+            person = random.choice(kandidaten)
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
@@ -197,15 +181,7 @@ def plan_speichern(plan):
 
 def get_recent_entries(weeks=8):
     cutoff = datetime.now() - timedelta(weeks=weeks)
-    result = []
-    for e in data["eintraege"]:
-        try:
-            d = datetime.strptime(e["date"], "%Y-%m-%d")
-            if d >= cutoff:
-                result.append(e)
-        except:
-            pass
-    return result
+    return [e for e in data["eintraege"] if datetime.strptime(e["date"], "%Y-%m-%d") >= cutoff]
 
 def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
@@ -216,12 +192,34 @@ def statistik_wochen(weeks=8):
     return statistik
 
 # ============================================================
-# 🧭 Streamlit Oberfläche (UNVERÄNDERT)
+# 🧭 UI (JETZT WIEDER DA!)
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
+tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik"])
 
-# (Rest bleibt exakt wie bei dir)
+with tab1:
+    st.header("Planung")
+    if st.button("Plan erstellen"):
+        plan = generiere_plan("Woche")
+        if plan:
+            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
+            st.dataframe(df)
+
+with tab2:
+    st.header("Verwaltung")
+    pw = st.text_input("Passwort", type="password")
+    if pw == ADMIN_PASSWORD:
+        st.success("Zugriff erlaubt")
+        new = st.text_input("Mitarbeiter")
+        if st.button("Hinzufügen"):
+            add_mitarbeiter(new)
+            st.rerun()
+
+with tab3:
+    st.header("Statistik")
+    stats = statistik_wochen()
+    for p, d in stats.items():
+        st.write(p, dict(d))
