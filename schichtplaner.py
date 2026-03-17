@@ -215,7 +215,7 @@ st.title("🗓 Schichtplan-Manager")
 
 tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
 
-# gewünschte Reihenfolge für Anzeige
+# Reihenfolge der Arbeitsplätze (links → rechts)
 arbeitsplatz_reihenfolge = [
     "Bahnhof",
     "Bahnhof Stapler",
@@ -275,9 +275,14 @@ with tab1:
         if plan:
             st.subheader(f"📋 Plan {zeitraum_label}")
             df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            df["Arbeit"] = pd.Categorical(df["Arbeit"], categories=arbeitsplatz_reihenfolge, ordered=True)
-            df = df.sort_values("Arbeit")
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            # Pivotieren, damit jede Arbeit eine Spalte wird (horizontal)
+            df = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
+            max_len = df.apply(len).max()
+            df_expanded = pd.DataFrame({
+                a: (df[a] + [""] * (max_len - len(df[a])) if isinstance(df[a], list) else [""] * max_len)
+                for a in df.index
+            })
+            st.dataframe(df_expanded, use_container_width=True)
             if st.button(f"💾 {zeitraum_label} speichern"):
                 plan_speichern(plan)
                 st.success(f"Plan für {zeitraum_label} gespeichert ✅")
