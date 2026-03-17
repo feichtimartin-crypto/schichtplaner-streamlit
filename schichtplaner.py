@@ -74,7 +74,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 📊 Tabellenansicht (Teamlead + S3 zusammen)
+# 📊 Tabellenansicht
 # ============================================================
 
 def plan_als_tabelle(plan):
@@ -115,8 +115,8 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
-    # feste Positionen
-    for person, arbeit in data.get("feste_positionen", {}).items():
+    # 🔥 feste Positionen zuerst
+    for person, arbeit in data["feste_positionen"].items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
             verfuegbar.remove(person)
@@ -201,14 +201,12 @@ tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik"]
 # ============================================================
 
 with tab1:
-    st.header("🗓 Planung")
+    st.header("Planung")
 
     if "abwesend" not in st.session_state:
         st.session_state["abwesend"] = set()
 
-    st.subheader("🚫 Abwesenheiten")
     tmp = set()
-
     cols = st.columns(4)
     for i, name in enumerate(data["mitarbeiter"]):
         if cols[i % 4].checkbox(name, value=name in st.session_state["abwesend"]):
@@ -216,30 +214,18 @@ with tab1:
 
     st.session_state["abwesend"] = tmp
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("📅 Plan Mo/Di erstellen"):
-            plan = generiere_plan("MoDi")
-            if plan:
-                st.session_state["plan_modi"] = plan
-
-    with col2:
-        if st.button("📅 Plan Mi–Fr erstellen"):
-            plan = generiere_plan("MiFr")
-            if plan:
-                st.session_state["plan_mifr"] = plan
-
-    for key, label in [("plan_modi", "Mo/Di"), ("plan_mifr", "Mi–Fr")]:
-        plan = st.session_state.get(key)
+    if st.button("Plan erstellen"):
+        plan = generiere_plan("Standard")
         if plan:
-            st.subheader(f"📋 Plan {label}")
-            df = plan_als_tabelle(plan)
-            st.dataframe(df, use_container_width=True)
+            st.session_state["plan"] = plan
 
-            if st.button(f"💾 {label} speichern", key=f"save_{key}"):
-                plan_speichern(plan)
-                st.success("Gespeichert")
+    if "plan" in st.session_state:
+        df = plan_als_tabelle(st.session_state["plan"])
+        st.dataframe(df, use_container_width=True)
+
+        if st.button("Speichern"):
+            plan_speichern(st.session_state["plan"])
+            st.success("Gespeichert")
 
 # ============================================================
 # VERWALTUNG
@@ -250,30 +236,45 @@ with tab2:
     if password != ADMIN_PASSWORD:
         st.stop()
 
+    # Mitarbeiter
     st.subheader("👤 Mitarbeitende")
-
     new = st.text_input("Name")
     if st.button("➕ Hinzufügen"):
         add_mitarbeiter(new)
         st.rerun()
 
-    if data["mitarbeiter"]:
-        cols = st.columns(4)
-        for i, name in enumerate(data["mitarbeiter"]):
-            cols[i % 4].markdown(f"✅ {name}")
-    else:
-        st.info("Keine Mitarbeitenden vorhanden.")
+    cols = st.columns(4)
+    for i, name in enumerate(data["mitarbeiter"]):
+        cols[i % 4].markdown(f"✅ {name}")
 
+    # Arbeiten
     st.subheader("🧰 Arbeiten")
-
     newa = st.text_input("Arbeit")
     if st.button("➕ Arbeit hinzufügen"):
         add_arbeit(newa)
         st.rerun()
 
-    st.write(data["arbeiten"])
+    cols = st.columns(4)
+    for i, job in enumerate(data["arbeiten"]):
+        cols[i % 4].markdown(f"🔧 {job}")
 
-    st.subheader("👥 Mindest")
+    # Feste Positionen
+    st.subheader("📌 Feste Positionen")
+    pers = st.selectbox("Mitarbeiter", ["–"] + data["mitarbeiter"])
+    job = st.selectbox("Arbeit", ["–"] + data["arbeiten"])
+
+    if pers != "–" and job != "–" and st.button("Fix setzen"):
+        data["feste_positionen"][pers] = job
+        save_data(data)
+        st.success(f"{pers} → {job}")
+        st.rerun()
+
+    if data["feste_positionen"]:
+        df_fix = pd.DataFrame(data["feste_positionen"].items(), columns=["Mitarbeiter", "Arbeit"])
+        st.dataframe(df_fix, use_container_width=True)
+
+    # Mindest
+    st.subheader("Mindest")
     job = st.selectbox("Job", ["–"] + data["arbeiten"])
     val = st.number_input("Min", 1, 10)
 
@@ -282,7 +283,8 @@ with tab2:
         save_data(data)
         st.rerun()
 
-    st.subheader("📊 Max")
+    # Max
+    st.subheader("Max")
     job2 = st.selectbox("Job max", ["–"] + data["arbeiten"])
     val2 = st.number_input("Max", 1, 20)
 
