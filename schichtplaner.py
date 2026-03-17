@@ -173,10 +173,15 @@ def plan_speichern(plan):
 
 def get_recent_entries(weeks=8):
     cutoff = datetime.now() - timedelta(weeks=weeks)
-    return [
-        e for e in data["eintraege"]
-        if datetime.strptime(e["date"], "%Y-%m-%d") >= cutoff
-    ]
+    result = []
+    for e in data["eintraege"]:
+        try:
+            d = datetime.strptime(e["date"], "%Y-%m-%d")
+            if d >= cutoff:
+                result.append(e)
+        except:
+            pass
+    return result
 
 def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
@@ -193,14 +198,14 @@ def statistik_wochen(weeks=8):
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik"])
+tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
 
 # ============================================================
 # PLANUNG
 # ============================================================
 
 with tab1:
-    st.header("Planung")
+    st.header("🗓 Planung")
 
     if "abwesend" not in st.session_state:
         st.session_state["abwesend"] = set()
@@ -212,43 +217,55 @@ with tab1:
 
     st.session_state["abwesend"] = tmp
 
-    if st.button("Plan erstellen"):
-        plan = generiere_plan("Standard")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("📅 Plan Mo/Di erstellen"):
+            plan = generiere_plan("MoDi")
+            if plan:
+                st.session_state["plan_modi"] = plan
+
+    with col2:
+        if st.button("📅 Plan Mi–Fr erstellen"):
+            plan = generiere_plan("MiFr")
+            if plan:
+                st.session_state["plan_mifr"] = plan
+
+    for key, label in [("plan_modi", "Mo/Di"), ("plan_mifr", "Mi–Fr")]:
+        plan = st.session_state.get(key)
         if plan:
-            st.session_state["plan"] = plan
+            st.subheader(f"📋 Plan {label}")
+            df = plan_als_tabelle(plan)
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
-    if "plan" in st.session_state:
-        df = plan_als_tabelle(st.session_state["plan"])
-        st.dataframe(df, use_container_width=True)
-
-        if st.button("Speichern"):
-            plan_speichern(st.session_state["plan"])
-            st.success("Gespeichert")
+            if st.button(f"💾 {label} speichern", key=f"save_{key}"):
+                plan_speichern(plan)
+                st.success("Gespeichert")
 
 # ============================================================
 # VERWALTUNG
 # ============================================================
 
 with tab2:
-    pw = st.text_input("Passwort", type="password")
-    if pw != ADMIN_PASSWORD:
+    password = st.text_input("Passwort:", type="password")
+    if password != ADMIN_PASSWORD:
         st.stop()
 
-    st.subheader("Mitarbeiter")
+    st.subheader("👤 Mitarbeitende")
     new = st.text_input("Name")
     if st.button("Hinzufügen"):
         add_mitarbeiter(new)
 
     st.write(data["mitarbeiter"])
 
-    st.subheader("Arbeiten")
+    st.subheader("🧰 Arbeiten")
     newa = st.text_input("Arbeit")
     if st.button("Add Arbeit"):
         add_arbeit(newa)
 
     st.write(data["arbeiten"])
 
-    st.subheader("Mindest")
+    st.subheader("👥 Mindest")
     job = st.selectbox("Job", ["–"] + data["arbeiten"])
     val = st.number_input("Min", 1, 10)
 
@@ -256,7 +273,7 @@ with tab2:
         data["mindest_besetzung"][job] = val
         save_data(data)
 
-    st.subheader("Max")
+    st.subheader("📊 Max")
     job2 = st.selectbox("Job max", ["–"] + data["arbeiten"])
     val2 = st.number_input("Max", 1, 20)
 
@@ -272,5 +289,6 @@ with tab3:
     stats = statistik_wochen()
 
     for person, daten in stats.items():
-        st.write(person)
-        st.write(dict(daten))
+        st.subheader(person)
+        df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
+        st.bar_chart(df.set_index("Arbeit"))
