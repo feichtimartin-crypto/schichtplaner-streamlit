@@ -24,7 +24,7 @@ DEFAULT_ARBEITEN = [
     "Frunks",
     "Door´s Stapler",
     "Door´s Tugger",
-    "Sonstiges"  # Neue Kategorie
+    "Sonstiges"
 ]
 
 DEFAULT_MIN = {
@@ -43,7 +43,7 @@ DEFAULT_MIN = {
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 4,  # Maximum geändert
+    "Bahnhof": 4,  # maximal 4
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
@@ -124,7 +124,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Bahnhof & Sonstiges
+# 🧠 Plan-Logik mit Bahnhof max 4
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -140,7 +140,7 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
-    # feste Positionen
+    # feste Positionen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
@@ -151,7 +151,7 @@ def generiere_plan(zeitraum_label):
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # Arbeiten außer Bahnhof/Sonstiges
+    # Alle Arbeiten außer Bahnhof/Sonstiges
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
