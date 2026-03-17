@@ -23,7 +23,8 @@ DEFAULT_ARBEITEN = [
     "Wareneingang",
     "Frunks",
     "Door´s Stapler",
-    "Door´s Tugger"
+    "Door´s Tugger",
+    "Sonstiges"  # Neue Kategorie
 ]
 
 DEFAULT_MIN = {
@@ -35,19 +36,21 @@ DEFAULT_MIN = {
     "Wareneingang": 3,
     "Frunks": 1,
     "Door´s Stapler": 1,
-    "Door´s Tugger": 1
+    "Door´s Tugger": 1,
+    "Sonstiges": 0
 }
 
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 999,
+    "Bahnhof": 4,  # Maximum für Bahnhof geändert
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
     "Frunks": 1,
     "Door´s Stapler": 1,
-    "Door´s Tugger": 1
+    "Door´s Tugger": 1,
+    "Sonstiges": 999  # keine Limitierung für Sonstiges
 }
 
 # ============================================================
@@ -121,7 +124,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Bahnhof zuletzt
+# 🧠 Plan-Logik mit Bahnhof zuletzt & Sonstiges
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -150,7 +153,7 @@ def generiere_plan(zeitraum_label):
 
     # 🔹 Alle Arbeiten außer Bahnhof
     for arbeit in arbeiten:
-        if arbeit == "Bahnhof":
+        if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
         aktuelle = [p for a, p in plan if a == arbeit]
         min_soll = data["mindest_besetzung"].get(arbeit, 1)
@@ -172,9 +175,20 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # 🔹 Restliche Mitarbeiter → Bahnhof
+    # 🔹 Bahnhof max 4, Rest → Sonstiges
+    bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
+    bahnhof_mitarbeiter = []
+    sonstiges_mitarbeiter = []
     for person in verfuegbar:
+        if len(bahnhof_mitarbeiter) < bahnhof_max:
+            bahnhof_mitarbeiter.append(person)
+        else:
+            sonstiges_mitarbeiter.append(person)
+
+    for person in bahnhof_mitarbeiter:
         plan.append(("Bahnhof", person))
+    for person in sonstiges_mitarbeiter:
+        plan.append(("Sonstiges", person))
 
     return {
         "type": zeitraum_label,
@@ -223,6 +237,7 @@ arbeitsplatz_reihenfolge = [
     "Frunks",
     "Door´s Stapler",
     "Door´s Tugger",
+    "Sonstiges",
     "Teamlead",
     "S3"
 ]
