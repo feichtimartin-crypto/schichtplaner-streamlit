@@ -152,7 +152,6 @@ def generiere_plan(zeitraum_label):
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
-        aktuelle = [p for a, p in plan if a == arbeit]
         min_soll = data["mindest_besetzung"].get(arbeit, 1)
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
@@ -172,7 +171,9 @@ def generiere_plan(zeitraum_label):
 
     # Bahnhof max 4, Rest → Sonstiges
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
-    bahnhof_mitarbeiter = []
+    # Bereits geplante Bahnhof-Mitarbeiter zählen
+    bereits_bahnhof = [p for a, p in plan if a == "Bahnhof"]
+    bahnhof_mitarbeiter = bereits_bahnhof.copy()
     sonstiges_mitarbeiter = []
 
     for person in verfuegbar:
@@ -180,6 +181,9 @@ def generiere_plan(zeitraum_label):
             bahnhof_mitarbeiter.append(person)
         else:
             sonstiges_mitarbeiter.append(person)
+
+    # Alte Bahnhof-Zuweisungen aus Plan entfernen
+    plan = [entry for entry in plan if entry[0] != "Bahnhof"]
 
     for person in bahnhof_mitarbeiter:
         plan.append(("Bahnhof", person))
