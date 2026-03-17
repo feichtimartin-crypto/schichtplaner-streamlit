@@ -43,7 +43,7 @@ DEFAULT_MIN = {
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 4,
+    "Bahnhof": 4,  # maximal 4
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
@@ -77,12 +77,9 @@ def save_data(data):
 data = load_data()
 
 # Sicherheits-Upgrade
-if "feste_positionen" not in data:
-    data["feste_positionen"] = {}
-if "mindest_besetzung" not in data:
-    data["mindest_besetzung"] = {}
-if "max_besetzung" not in data:
-    data["max_besetzung"] = {}
+for k in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
+    if k not in data:
+        data[k] = {}
 
 if not data["arbeiten"]:
     data["arbeiten"] = DEFAULT_ARBEITEN.copy()
@@ -124,7 +121,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Bahnhof max 4
+# 🧠 Plan-Logik mit Bahnhof max 4 + Sonstiges
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -151,7 +148,7 @@ def generiere_plan(zeitraum_label):
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # Alle Arbeiten außer Bahnhof/Sonstiges
+    # Zuerst alle Arbeiten außer Bahnhof/Sonstiges
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -160,9 +157,7 @@ def generiere_plan(zeitraum_label):
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
         # Mindest auffüllen
-        for _ in range(max(0, min_soll - len(aktuelle))):
-            if not verfuegbar:
-                break
+        while len([p for a, p in plan if a == arbeit]) < min_soll and verfuegbar:
             kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
             person = random.choice(kandidaten)
             plan.append((arbeit, person))
@@ -179,6 +174,7 @@ def generiere_plan(zeitraum_label):
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_mitarbeiter = []
     sonstiges_mitarbeiter = []
+
     for person in verfuegbar:
         if len(bahnhof_mitarbeiter) < bahnhof_max:
             bahnhof_mitarbeiter.append(person)
