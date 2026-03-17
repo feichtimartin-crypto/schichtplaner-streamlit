@@ -88,7 +88,7 @@ def plan_als_tabelle(plan):
 
     prioritaet = ["Teamlead", "S3"]
     andere = sorted([a for a in arbeit_dict.keys() if a not in prioritaet])
-    sortierte_arbeiten = prioritaet + andere
+    sortierte_arbeiten = andere + prioritaet
     sortierte_arbeiten = [a for a in sortierte_arbeiten if a in arbeit_dict]
 
     max_len = max(len(v) for v in arbeit_dict.values())
