@@ -14,8 +14,6 @@ DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
 ADMIN_PASSWORD = "Nikolajistcoll"
 
-PRIORITAET = ["Teamlead", "S3"]
-
 # ============================================================
 # 🔹 Datenverwaltung
 # ============================================================
@@ -42,7 +40,6 @@ def save_data(data):
 
 data = load_data()
 
-# Sicherheits-Upgrade
 for key in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
     if key not in data:
         data[key] = {}
@@ -77,7 +74,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 📊 Neue Tabellenansicht
+# 📊 Tabellenansicht (Teamlead + S3 zusammen)
 # ============================================================
 
 def plan_als_tabelle(plan):
@@ -89,10 +86,10 @@ def plan_als_tabelle(plan):
     if not arbeit_dict:
         return pd.DataFrame()
 
-    sortierte_arbeiten = sorted(
-        arbeit_dict.keys(),
-        key=lambda x: (PRIORITAET.index(x) if x in PRIORITAET else 999, x)
-    )
+    prioritaet = ["Teamlead", "S3"]
+    andere = sorted([a for a in arbeit_dict.keys() if a not in prioritaet])
+    sortierte_arbeiten = prioritaet + andere
+    sortierte_arbeiten = [a for a in sortierte_arbeiten if a in arbeit_dict]
 
     max_len = max(len(v) for v in arbeit_dict.values())
 
@@ -130,16 +127,15 @@ def generiere_plan(zeitraum_label):
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # Verteilung
     for arbeit in arbeiten:
         aktuelle = [p for a, p in plan if a == arbeit]
 
         min_soll = data.get("mindest_besetzung", {}).get(arbeit, 1)
         max_soll = data.get("max_besetzung", {}).get(arbeit, min_soll)
 
-        # Mindestbesetzung
         benoetigt = max(0, min_soll - len(aktuelle))
 
+        # Mindest
         for _ in range(benoetigt):
             if not verfuegbar:
                 break
@@ -150,7 +146,7 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-        # Bis max auffüllen
+        # Max auffüllen
         aktuelle = [p for a, p in plan if a == arbeit]
         extra_slots = max(0, max_soll - len(aktuelle))
 
@@ -192,13 +188,13 @@ def statistik_wochen(weeks=8):
     return statistik
 
 # ============================================================
-# 🧭 UI
+# UI
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
+tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik"])
 
 # ============================================================
 # PLANUNG
@@ -210,9 +206,12 @@ with tab1:
     if "abwesend" not in st.session_state:
         st.session_state["abwesend"] = set()
 
+    st.subheader("🚫 Abwesenheiten")
     tmp = set()
-    for name in data["mitarbeiter"]:
-        if st.checkbox(name, value=name in st.session_state["abwesend"]):
+
+    cols = st.columns(4)
+    for i, name in enumerate(data["mitarbeiter"]):
+        if cols[i % 4].checkbox(name, value=name in st.session_state["abwesend"]):
             tmp.add(name)
 
     st.session_state["abwesend"] = tmp
@@ -236,7 +235,7 @@ with tab1:
         if plan:
             st.subheader(f"📋 Plan {label}")
             df = plan_als_tabelle(plan)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, use_container_width=True)
 
             if st.button(f"💾 {label} speichern", key=f"save_{key}"):
                 plan_speichern(plan)
@@ -252,16 +251,25 @@ with tab2:
         st.stop()
 
     st.subheader("👤 Mitarbeitende")
-    new = st.text_input("Name")
-    if st.button("Hinzufügen"):
-        add_mitarbeiter(new)
 
-    st.write(data["mitarbeiter"])
+    new = st.text_input("Name")
+    if st.button("➕ Hinzufügen"):
+        add_mitarbeiter(new)
+        st.rerun()
+
+    if data["mitarbeiter"]:
+        cols = st.columns(4)
+        for i, name in enumerate(data["mitarbeiter"]):
+            cols[i % 4].markdown(f"✅ {name}")
+    else:
+        st.info("Keine Mitarbeitenden vorhanden.")
 
     st.subheader("🧰 Arbeiten")
+
     newa = st.text_input("Arbeit")
-    if st.button("Add Arbeit"):
+    if st.button("➕ Arbeit hinzufügen"):
         add_arbeit(newa)
+        st.rerun()
 
     st.write(data["arbeiten"])
 
@@ -269,17 +277,19 @@ with tab2:
     job = st.selectbox("Job", ["–"] + data["arbeiten"])
     val = st.number_input("Min", 1, 10)
 
-    if st.button("Min speichern"):
+    if job != "–" and st.button("Min speichern"):
         data["mindest_besetzung"][job] = val
         save_data(data)
+        st.rerun()
 
     st.subheader("📊 Max")
     job2 = st.selectbox("Job max", ["–"] + data["arbeiten"])
     val2 = st.number_input("Max", 1, 20)
 
-    if st.button("Max speichern"):
+    if job2 != "–" and st.button("Max speichern"):
         data["max_besetzung"][job2] = val2
         save_data(data)
+        st.rerun()
 
 # ============================================================
 # STATISTIK
@@ -288,7 +298,10 @@ with tab2:
 with tab3:
     stats = statistik_wochen()
 
-    for person, daten in stats.items():
-        st.subheader(person)
-        df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-        st.bar_chart(df.set_index("Arbeit"))
+    if not stats:
+        st.info("Noch keine Daten.")
+    else:
+        for person, daten in stats.items():
+            st.subheader(person)
+            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
+            st.bar_chart(df.set_index("Arbeit"))
