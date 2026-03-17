@@ -86,7 +86,7 @@ def plan_als_tabelle(plan):
     if not arbeit_dict:
         return pd.DataFrame()
 
-    prioritaet = ["S3" , "Teamlead"]
+    prioritaet = ["Bahnhof" , "S3" , "Teamlead"]
     andere = sorted([a for a in arbeit_dict.keys() if a not in prioritaet])
     sortierte_arbeiten = andere + prioritaet
     sortierte_arbeiten = [a for a in sortierte_arbeiten if a in arbeit_dict]
