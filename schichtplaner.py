@@ -43,7 +43,7 @@ DEFAULT_MIN = {
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 4,  # maximal 4
+    "Bahnhof": 4,
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
