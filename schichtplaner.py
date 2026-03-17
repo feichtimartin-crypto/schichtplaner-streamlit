@@ -215,7 +215,6 @@ st.title("🗓 Schichtplan-Manager")
 
 tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
 
-# Reihenfolge der Arbeitsplätze (links → rechts)
 arbeitsplatz_reihenfolge = [
     "Bahnhof",
     "Bahnhof Stapler",
@@ -228,6 +227,7 @@ arbeitsplatz_reihenfolge = [
     "S3"
 ]
 
+# ------------------- PLANUNG -------------------
 with tab1:
     st.header("🗓 Planung")
     st.subheader("🚫 Abwesenheiten (Urlaub / Krank)")
@@ -275,20 +275,20 @@ with tab1:
         if plan:
             st.subheader(f"📋 Plan {zeitraum_label}")
             df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            # Pivotieren, damit jede Arbeit eine Spalte wird (horizontal)
             df = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
             max_len = df.apply(len).max()
             df_expanded = pd.DataFrame({
                 a: (df[a] + [""] * (max_len - len(df[a])) if isinstance(df[a], list) else [""] * max_len)
                 for a in df.index
             })
-            st.dataframe(df_expanded, use_container_width=True)
+            st.dataframe(df_expanded, use_container_width=True, hide_index=True)
             if st.button(f"💾 {zeitraum_label} speichern"):
                 plan_speichern(plan)
                 st.success(f"Plan für {zeitraum_label} gespeichert ✅")
         else:
             st.info(f"Kein Plan für {zeitraum_label} generiert.")
 
+# ------------------- VERWALTUNG -------------------
 with tab2:
     st.header("🔒 Verwaltung")
     password = st.text_input("Passwort:", type="password")
@@ -366,13 +366,23 @@ with tab2:
     else:
         st.info("Keine Mindestregelungen gesetzt.")
 
+# ------------------- STATISTIK -------------------
 with tab3:
     st.header("📊 Statistik der letzten 8 Wochen")
+
+    if st.button("🗑️ Alle Statistikdaten löschen"):
+        data["eintraege"].clear()
+        save_data(data)
+        st.success("Alle Statistikdaten gelöscht!")
+        st.experimental_rerun()
+
     stats = statistik_wochen(8)
     if not stats:
         st.info("Noch keine Daten.")
     else:
         for person, daten in stats.items():
+            if person in ["S3", "Teamlead"]:
+                continue
             st.subheader(f"👤 {person}")
             df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
             st.bar_chart(df.set_index("Arbeit"))
