@@ -13,7 +13,7 @@ import pandas as pd
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
-ADMIN_PASSWORD = "Nikolajistcoll"  # 🔐 Passwortschutz für Verwaltung
+ADMIN_PASSWORD = "Nikolajistcool"  # 🔐 Passwortschutz für Verwaltung
 
 
 # ============================================================
