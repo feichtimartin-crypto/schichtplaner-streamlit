@@ -12,7 +12,7 @@ from collections import defaultdict, Counter
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
-ADMIN_PASSWORD = "Nikolajistcoll"
+ADMIN_PASSWORD = "Nikolajistcool"
 
 # ============================================================
 # 🔹 Datenverwaltung
