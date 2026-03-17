@@ -38,6 +38,14 @@ def save_data(data):
 
 data = load_data()
 
+# ✨ Sicherheits-Upgrade für alte gespeicherte Dateien
+if "feste_positionen" not in data:
+    data["feste_positionen"] = {}
+if "mindest_besetzung" not in data:
+    data["mindest_besetzung"] = {}
+save_data(data)
+
+
 
 # ============================================================
 # ⚙️ Basis‑Funktionen
