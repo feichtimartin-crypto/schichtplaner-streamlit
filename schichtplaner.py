@@ -121,7 +121,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Rest-Verteilung auf Bahnhof
+# 🧠 Plan-Logik mit Bahnhof zuletzt
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -215,6 +215,19 @@ st.title("🗓 Schichtplan-Manager")
 
 tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
 
+# gewünschte Reihenfolge für Anzeige
+arbeitsplatz_reihenfolge = [
+    "Bahnhof",
+    "Bahnhof Stapler",
+    "Bahnhof Tugger",
+    "Wareneingang",
+    "Frunks",
+    "Door´s Stapler",
+    "Door´s Tugger",
+    "Teamlead",
+    "S3"
+]
+
 with tab1:
     st.header("🗓 Planung")
     st.subheader("🚫 Abwesenheiten (Urlaub / Krank)")
@@ -261,7 +274,9 @@ with tab1:
         plan = st.session_state.get(key, None)
         if plan:
             st.subheader(f"📋 Plan {zeitraum_label}")
-            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"]).sort_values("Arbeit")
+            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
+            df["Arbeit"] = pd.Categorical(df["Arbeit"], categories=arbeitsplatz_reihenfolge, ordered=True)
+            df = df.sort_values("Arbeit")
             st.dataframe(df, use_container_width=True, hide_index=True)
             if st.button(f"💾 {zeitraum_label} speichern"):
                 plan_speichern(plan)
