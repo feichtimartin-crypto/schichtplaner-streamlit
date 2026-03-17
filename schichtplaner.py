@@ -12,7 +12,7 @@ from collections import defaultdict, Counter
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
-ADMIN_PASSWORD = "Nikolajistcool"
+ADMIN_PASSWORD = "Nikolajistcoll"
 
 # ============================================================
 # 🔹 Datenverwaltung
@@ -71,10 +71,14 @@ def remove_arbeit(arbeit):
         data["arbeiten"].remove(arbeit)
         data["mindest_besetzung"].pop(arbeit, None)
         data["max_besetzung"].pop(arbeit, None)
+        # Feste Positionen mit dieser Arbeit löschen
+        to_remove = [p for p, j in data["feste_positionen"].items() if j == arbeit]
+        for p in to_remove:
+            data["feste_positionen"].pop(p, None)
         save_data(data)
 
 # ============================================================
-# 📊 Tabellenansicht
+# 📊 Tabellenansicht (Teamlead + S3 zusammen)
 # ============================================================
 
 def plan_als_tabelle(plan):
@@ -86,9 +90,9 @@ def plan_als_tabelle(plan):
     if not arbeit_dict:
         return pd.DataFrame()
 
-    prioritaet = ["Bahnhof" , "S3" , "Teamlead"]
+    prioritaet = ["Teamlead", "S3"]
     andere = sorted([a for a in arbeit_dict.keys() if a not in prioritaet])
-    sortierte_arbeiten = andere + prioritaet
+    sortierte_arbeiten = prioritaet + andere
     sortierte_arbeiten = [a for a in sortierte_arbeiten if a in arbeit_dict]
 
     max_len = max(len(v) for v in arbeit_dict.values())
@@ -115,7 +119,7 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
-    # 🔥 feste Positionen zuerst
+    # feste Positionen zuerst
     for person, arbeit in data["feste_positionen"].items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
@@ -135,7 +139,7 @@ def generiere_plan(zeitraum_label):
 
         benoetigt = max(0, min_soll - len(aktuelle))
 
-        # Mindest
+        # Mindestbesetzung
         for _ in range(benoetigt):
             if not verfuegbar:
                 break
@@ -146,7 +150,7 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-        # Max auffüllen
+        # Maximalbesetzung auffüllen
         aktuelle = [p for a, p in plan if a == arbeit]
         extra_slots = max(0, max_soll - len(aktuelle))
 
@@ -206,24 +210,26 @@ with tab1:
     if "abwesend" not in st.session_state:
         st.session_state["abwesend"] = set()
 
+    st.subheader("🚫 Abwesenheiten")
     tmp = set()
     cols = st.columns(4)
     for i, name in enumerate(data["mitarbeiter"]):
         if cols[i % 4].checkbox(name, value=name in st.session_state["abwesend"]):
             tmp.add(name)
-
     st.session_state["abwesend"] = tmp
 
-    if st.button("Plan erstellen"):
-        plan = generiere_plan("Standard")
-        if plan:
-            st.session_state["plan"] = plan
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📅 Plan erstellen"):
+            plan = generiere_plan("Standard")
+            if plan:
+                st.session_state["plan"] = plan
 
     if "plan" in st.session_state:
         df = plan_als_tabelle(st.session_state["plan"])
         st.dataframe(df, use_container_width=True)
 
-        if st.button("Speichern"):
+        if st.button("💾 Plan speichern"):
             plan_speichern(st.session_state["plan"])
             st.success("Gespeichert")
 
@@ -236,33 +242,42 @@ with tab2:
     if password != ADMIN_PASSWORD:
         st.stop()
 
-    # Mitarbeiter
+    # Mitarbeitende
     st.subheader("👤 Mitarbeitende")
-    new = st.text_input("Name")
+    new = st.text_input("Neuer Mitarbeiter")
     if st.button("➕ Hinzufügen"):
         add_mitarbeiter(new)
         st.rerun()
 
+    st.write("Aktuelle Mitarbeitende:")
     cols = st.columns(4)
     for i, name in enumerate(data["mitarbeiter"]):
-        cols[i % 4].markdown(f"✅ {name}")
+        col1, col2 = st.columns([4,1])
+        col1.markdown(f"✅ {name}")
+        if col2.button("❌", key=f"del_m_{name}"):
+            remove_mitarbeiter(name)
+            st.rerun()
 
     # Arbeiten
     st.subheader("🧰 Arbeiten")
-    newa = st.text_input("Arbeit")
+    newa = st.text_input("Neue Arbeit")
     if st.button("➕ Arbeit hinzufügen"):
         add_arbeit(newa)
         st.rerun()
 
+    st.write("Aktuelle Arbeiten:")
     cols = st.columns(4)
     for i, job in enumerate(data["arbeiten"]):
-        cols[i % 4].markdown(f"🔧 {job}")
+        col1, col2 = st.columns([4,1])
+        col1.markdown(f"🔧 {job}")
+        if col2.button("❌", key=f"del_j_{job}"):
+            remove_arbeit(job)
+            st.rerun()
 
     # Feste Positionen
     st.subheader("📌 Feste Positionen")
     pers = st.selectbox("Mitarbeiter", ["–"] + data["mitarbeiter"])
     job = st.selectbox("Arbeit", ["–"] + data["arbeiten"])
-
     if pers != "–" and job != "–" and st.button("Fix setzen"):
         data["feste_positionen"][pers] = job
         save_data(data)
@@ -274,21 +289,19 @@ with tab2:
         st.dataframe(df_fix, use_container_width=True)
 
     # Mindest
-    st.subheader("Mindest")
-    job = st.selectbox("Job", ["–"] + data["arbeiten"])
+    st.subheader("👥 Mindestbesetzung")
+    job = st.selectbox("Job Min", ["–"] + data["arbeiten"])
     val = st.number_input("Min", 1, 10)
-
-    if job != "–" and st.button("Min speichern"):
+    if job != "–" and st.button("Min speichern", key="min_save"):
         data["mindest_besetzung"][job] = val
         save_data(data)
         st.rerun()
 
     # Max
-    st.subheader("Max")
-    job2 = st.selectbox("Job max", ["–"] + data["arbeiten"])
+    st.subheader("📊 Maximalbesetzung")
+    job2 = st.selectbox("Job Max", ["–"] + data["arbeiten"])
     val2 = st.number_input("Max", 1, 20)
-
-    if job2 != "–" and st.button("Max speichern"):
+    if job2 != "–" and st.button("Max speichern", key="max_save"):
         data["max_besetzung"][job2] = val2
         save_data(data)
         st.rerun()
