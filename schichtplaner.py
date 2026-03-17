@@ -43,14 +43,14 @@ DEFAULT_MIN = {
 DEFAULT_MAX = {
     "Teamlead": 2,
     "S3": 2,
-    "Bahnhof": 4,  # Maximum für Bahnhof geändert
+    "Bahnhof": 4,  # Maximum geändert
     "Bahnhof Stapler": 3,
     "Bahnhof Tugger": 5,
     "Wareneingang": 4,
     "Frunks": 1,
     "Door´s Stapler": 1,
     "Door´s Tugger": 1,
-    "Sonstiges": 999  # keine Limitierung für Sonstiges
+    "Sonstiges": 999
 }
 
 # ============================================================
@@ -76,6 +76,7 @@ def save_data(data):
 
 data = load_data()
 
+# Sicherheits-Upgrade
 if "feste_positionen" not in data:
     data["feste_positionen"] = {}
 if "mindest_besetzung" not in data:
@@ -89,7 +90,6 @@ if not data["arbeiten"]:
 for a, v in DEFAULT_MIN.items():
     if a not in data["mindest_besetzung"]:
         data["mindest_besetzung"][a] = v
-
 for a, v in DEFAULT_MAX.items():
     if a not in data["max_besetzung"]:
         data["max_besetzung"][a] = v
@@ -124,7 +124,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Bahnhof zuletzt & Sonstiges
+# 🧠 Plan-Logik mit Bahnhof & Sonstiges
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -151,7 +151,7 @@ def generiere_plan(zeitraum_label):
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # 🔹 Alle Arbeiten außer Bahnhof
+    # Arbeiten außer Bahnhof/Sonstiges
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -159,7 +159,7 @@ def generiere_plan(zeitraum_label):
         min_soll = data["mindest_besetzung"].get(arbeit, 1)
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
-        # Mindest erfüllen
+        # Mindest auffüllen
         for _ in range(max(0, min_soll - len(aktuelle))):
             if not verfuegbar:
                 break
@@ -175,7 +175,7 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # 🔹 Bahnhof max 4, Rest → Sonstiges
+    # Bahnhof max 4, Rest → Sonstiges
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_mitarbeiter = []
     sonstiges_mitarbeiter = []
@@ -290,11 +290,12 @@ with tab1:
         if plan:
             st.subheader(f"📋 Plan {zeitraum_label}")
             df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            df = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
-            max_len = df.apply(len).max()
+            df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
+            df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
+            max_len = df_grouped.apply(len).max()
             df_expanded = pd.DataFrame({
-                a: (df[a] + [""] * (max_len - len(df[a])) if isinstance(df[a], list) else [""] * max_len)
-                for a in df.index
+                a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
+                for a in df_grouped.index
             })
             st.dataframe(df_expanded, use_container_width=True, hide_index=True)
             if st.button(f"💾 {zeitraum_label} speichern"):
