@@ -8,16 +8,16 @@ from collections import defaultdict, Counter
 
 
 # ============================================================
-# 🔸 Einstellungen & Datenpfade
+# 🔸 Einstellungen
 # ============================================================
 
 DATA_FILE = Path("data/historie.json")
 DATA_FILE.parent.mkdir(exist_ok=True)
-ADMIN_PASSWORD = "Nikolajistcoll"  # Passwort für Verwaltung
+ADMIN_PASSWORD = "Nikolajistcoll"  # 🔐 Passwort für Verwaltung
 
 
 # ============================================================
-# 🔹 Datenverwaltung
+# 🔹 Datenverwaltung
 # ============================================================
 
 def load_data():
@@ -28,8 +28,8 @@ def load_data():
         "mitarbeiter": [],
         "arbeiten": [],
         "eintraege": [],
-        "feste_positionen": {},   # Neu: {"Anna": "Kasse"}
-        "mindest_besetzung": {}   # Neu: {"Lager": 2}
+        "feste_positionen": {},
+        "mindest_besetzung": {}
     }
 
 def save_data(data):
@@ -38,7 +38,7 @@ def save_data(data):
 
 data = load_data()
 
-# ✨ Sicherheits-Upgrade für alte gespeicherte Dateien
+# ✨ Sicherheits-Upgrade für alte Dateien
 if "feste_positionen" not in data:
     data["feste_positionen"] = {}
 if "mindest_besetzung" not in data:
@@ -46,9 +46,8 @@ if "mindest_besetzung" not in data:
 save_data(data)
 
 
-
 # ============================================================
-# ⚙️ Basis‑Funktionen
+# ⚙️ Funktionen
 # ============================================================
 
 def add_mitarbeiter(name):
@@ -59,7 +58,6 @@ def add_mitarbeiter(name):
 def remove_mitarbeiter(name):
     if name in data["mitarbeiter"]:
         data["mitarbeiter"].remove(name)
-        # Auch aus festen Positionen entfernen
         data["feste_positionen"].pop(name, None)
         save_data(data)
 
@@ -74,9 +72,8 @@ def remove_arbeit(arbeit):
         data["mindest_besetzung"].pop(arbeit, None)
         save_data(data)
 
-
 # ============================================================
-# 🧠 Plan‑Logik
+# 🧠 Plan-Logik
 # ============================================================
 
 def generiere_plan():
@@ -87,8 +84,11 @@ def generiere_plan():
         st.warning("Bitte zuerst Mitarbeiter und Arbeiten hinzufügen!")
         return None
 
+    # Abwesenheiten aus Session-State berücksichtigen
+    abwesende = st.session_state.get("abwesend", set())
+    verfuegbar = [m for m in mitarbeiter if m not in abwesende]
+
     plan = []
-    verfuegbar = mitarbeiter.copy()
 
     # --- 1️⃣ Feste Positionen zuerst setzen
     for person, arbeit in data.get("feste_positionen", {}).items():
@@ -96,31 +96,22 @@ def generiere_plan():
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # --- 2️⃣ Zähldaten aus Historie
+    # --- 2️⃣ Zähldaten aus Historie (faire Verteilung)
     count = defaultdict(lambda: defaultdict(int))
     for eintrag in data["eintraege"]:
         for arbeit, person in eintrag["plan"]:
             count[person][arbeit] += 1
 
-    # --- 3️⃣ Plan generieren für restliche Arbeiten
+    # --- 3️⃣ Restliche Arbeiten auffüllen (inkl. Mindest-Besetzung)
     for arbeit in arbeiten:
-        # Wenn Arbeit schon besetzt (durch feste Position oder mehrfachbedarf), prüfen:
-        aktuelle_personen = [p for (a, p) in plan if a == arbeit]
+        aktuelle = [p for a, p in plan if a == arbeit]
         soll = data.get("mindest_besetzung", {}).get(arbeit, 1)
-        benoetigt = max(0, soll - len(aktuelle_personen))
+        benoetigt = max(0, soll - len(aktuelle))
 
         for _ in range(benoetigt):
             if not verfuegbar:
-                verfuegbar = mitarbeiter.copy()
-                for _, p in plan:
-                    if p in verfuegbar:
-                        verfuegbar.remove(p)
-            # Kandidaten sortiert nach Häufigkeit
-            kandidaten = sorted(
-                verfuegbar, key=lambda p: count[p][arbeit]
-            )
-            if not kandidaten:
-                continue
+                break
+            kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
             min_count = count[kandidaten[0]][arbeit]
             beste = [k for k in kandidaten if count[k][arbeit] == min_count]
             person = random.choice(beste)
@@ -128,6 +119,7 @@ def generiere_plan():
             verfuegbar.remove(person)
 
     return plan
+
 
 def plan_speichern(plan):
     data["eintraege"].append({
@@ -138,10 +130,8 @@ def plan_speichern(plan):
 
 def get_recent_entries(weeks=8):
     cutoff = datetime.now() - timedelta(weeks=weeks)
-    return [
-        e for e in data["eintraege"]
-        if datetime.strptime(e["date"], "%Y-%m-%d") >= cutoff
-    ]
+    return [e for e in data["eintraege"]
+            if datetime.strptime(e["date"], "%Y-%m-%d") >= cutoff]
 
 def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
@@ -153,27 +143,49 @@ def statistik_wochen(weeks=8):
 
 
 # ============================================================
-# 🎨 Streamlit‑App
+# 🎨 Streamlit UI
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
-st.title("🗓 Schichtplan‑Manager")
+st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Plan", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
+tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
 
 
 # ============================================================
-# 1️⃣ TAB – PLAN
+# 1️⃣ TAB – PLANUNG (inkl. Abwesenheiten)
 # ============================================================
 
 with tab1:
-    st.header("📋 Schichtplan erstellen")
+    st.header("📋 Schichtplan")
 
-    if st.button("🔄 Neuen Plan generieren"):
+    # Abwesenheit auswählen
+    st.subheader("🚫 Abwesenheiten (Urlaub / Krank)")
+    if "abwesend" not in st.session_state:
+        st.session_state["abwesend"] = set()
+
+    if not data["mitarbeiter"]:
+        st.info("Keine Mitarbeiter vorhanden")
+    else:
+        abwahlen = []
+        for name in data["mitarbeiter"]:
+            cb = st.checkbox(name, value=(name in st.session_state["abwesend"]))
+            if cb:
+                abwahlen.append(name)
+        st.session_state["abwesend"] = set(abwahlen)
+
+        if st.session_state["abwesend"]:
+            st.error("❎ Abwesend: " + ", ".join(st.session_state["abwesend"]))
+        else:
+            st.success("✅ Alle verfügbar")
+
+    st.markdown("---")
+
+    if st.button("🔄 Neuen Plan generieren"):
         plan = generiere_plan()
         if plan:
             st.session_state["plan"] = plan
-            st.success("✅ Plan erstellt!")
+            st.success("✅ Plan erstellt!")
 
     plan = st.session_state.get("plan", None)
     if plan:
@@ -182,126 +194,125 @@ with tab1:
         df_plan = df_plan.sort_values("Arbeit")
         st.dataframe(df_plan, use_container_width=True, hide_index=True)
 
-        if st.button("💾 Plan speichern"):
+        if st.button("💾 Plan speichern"):
             plan_speichern(plan)
-            st.success("Gespeichert ✅")
+            st.success("Plan gespeichert ✅")
     else:
-        st.info("Noch kein Plan vorhanden.")
+        st.info("Noch kein Plan vorhanden")
 
 
 # ============================================================
-# 2️⃣ TAB – VERWALTUNG (Passwortgeschützt)
+# 2️⃣ TAB – VERWALTUNG (Passwort geschützt)
 # ============================================================
 
 with tab2:
-    st.header("🔒 Verwaltung")
+    st.header("🔒 Verwaltung")
 
-    password = st.text_input("Bitte Passwort eingeben:", type="password")
+    password = st.text_input("Passwort:", type="password")
     if password != ADMIN_PASSWORD:
-        st.warning("Zugriff verweigert – bitte gültiges Passwort eingeben.")
+        st.warning("Zugriff verweigert! Falsches Passwort.")
         st.stop()
 
-    st.success("Zugriff gewährt ✅")
+    st.success("Zugang erlaubt ✅")
 
     col1, col2 = st.columns(2)
 
-    # --- Mitarbeiter ---
+    # Mitarbeiter-Bereich
     with col1:
-        st.subheader("👤 Mitarbeiter")
-        name = st.text_input("Neuen Mitarbeiter hinzufügen:")
-        if st.button("➕ Hinzufügen"):
+        st.subheader("👤 Mitarbeiter")
+        name = st.text_input("Mitarbeiter hinzufügen:")
+        if st.button("➕ Hinzufügen"):
             add_mitarbeiter(name)
             st.rerun()
 
         if data["mitarbeiter"]:
-            selected = st.selectbox("Mitarbeiter löschen:", ["–"] + data["mitarbeiter"])
-            if selected != "–" and st.button("❌ Entfernen"):
-                remove_mitarbeiter(selected)
+            sel = st.selectbox("Mitarbeiter entfernen:", ["–"] + data["mitarbeiter"])
+            if sel != "–" and st.button("❌ Entfernen"):
+                remove_mitarbeiter(sel)
                 st.rerun()
-        st.info("Aktuell: " + ", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "Keine Mitarbeiter")
+        st.write("**Liste:**", ", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_leer_")
 
-    # --- Arbeiten ---
+    # Arbeiten-Bereich
     with col2:
-        st.subheader("🧰 Arbeiten")
-        arbeit = st.text_input("Neue Arbeit:")
-        if st.button("➕ Arbeit hinzufügen"):
+        st.subheader("🧰 Arbeiten")
+        arbeit = st.text_input("Neue Arbeit:")
+        if st.button("➕ Arbeit hinzufügen"):
             add_arbeit(arbeit)
             st.rerun()
 
         if data["arbeiten"]:
-            selected_work = st.selectbox("Arbeit löschen:", ["–"] + data["arbeiten"])
-            if selected_work != "–" and st.button("❌ Arbeit löschen"):
-                remove_arbeit(selected_work)
+            selw = st.selectbox("Arbeit löschen:", ["–"] + data["arbeiten"])
+            if selw != "–" and st.button("❌ Arbeit löschen"):
+                remove_arbeit(selw)
                 st.rerun()
-        st.info("Aktuell: " + ", ".join(data["arbeiten"]) if data["arbeiten"] else "Keine Arbeiten")
+        st.write("**Liste:**", ", ".join(data["arbeiten"]) if data["arbeiten"] else "_leer_")
 
     st.markdown("---")
 
-    # --- Feste Positionen (NEU) ---
-    st.subheader("📌 Feste Zuweisungen")
+    # Feste Zuweisungen
+    st.subheader("📌 Feste Zuweisungen")
     if data["mitarbeiter"] and data["arbeiten"]:
-        person_fix = st.selectbox("Mitarbeiter wählen", ["–"] + data["mitarbeiter"])
-        arbeit_fix = st.selectbox("Feste Arbeit für diesen Mitarbeiter", ["–"] + data["arbeiten"])
-        if person_fix != "–" and arbeit_fix != "–" and st.button("📍 Fixierung setzen"):
-            data["feste_positionen"][person_fix] = arbeit_fix
+        pfix = st.selectbox("Mitarbeiter:", ["–"] + data["mitarbeiter"])
+        afix = st.selectbox("Feste Arbeit:", ["–"] + data["arbeiten"])
+        if pfix != "–" and afix != "–" and st.button("📍 Fixierung setzen"):
+            data["feste_positionen"][pfix] = afix
             save_data(data)
-            st.success(f"{person_fix} ist jetzt dauerhaft an '{arbeit_fix}' eingeteilt.")
+            st.success(f"{pfix} dauerhaft für '{afix}' gesetzt")
             st.rerun()
 
     if data["feste_positionen"]:
-        st.write("**Aktuelle Fixierungen:**")
-        df_fest = pd.DataFrame(list(data["feste_positionen"].items()), columns=["Mitarbeiter", "Fixierte Arbeit"])
-        st.dataframe(df_fest, use_container_width=True, hide_index=True)
-
-        if st.button("🔓 Alle Fixierungen löschen"):
+        dffix = pd.DataFrame(
+            list(data["feste_positionen"].items()),
+            columns=["Mitarbeiter", "Feste Arbeit"]
+        )
+        st.dataframe(dffix, use_container_width=True, hide_index=True)
+        if st.button("🗑️ Alle Fixierungen löschen"):
             data["feste_positionen"].clear()
             save_data(data)
             st.rerun()
     else:
-        st.info("Noch keine Fixierungen gesetzt.")
+        st.info("Keine festen Zuweisungen definiert")
 
     st.markdown("---")
 
-    # --- Mindest‑Besetzung (NEU) ---
-    st.subheader("👥 Mindest‑Besetzung pro Arbeit")
+    # Mindest-Besetzung
+    st.subheader("👥 Mindest-Besetzung")
     if data["arbeiten"]:
-        arbeit_min = st.selectbox("Arbeit wählen zur Mindest‑Besetzung", ["–"] + data["arbeiten"])
-        anzahl_min = st.number_input("Benötigte Anzahl", min_value=1, max_value=10, step=1)
-        if arbeit_min != "–" and st.button("💾 Mindestwert speichern"):
-            data["mindest_besetzung"][arbeit_min] = anzahl_min
+        a_sel = st.selectbox("Arbeit wählen:", ["–"] + data["arbeiten"])
+        anzahl = st.number_input("Benötigte Anzahl:", min_value=1, max_value=10, step=1)
+        if a_sel != "–" and st.button("💾 Mindest-Besetzung speichern"):
+            data["mindest_besetzung"][a_sel] = anzahl
             save_data(data)
-            st.success(f"Mindest‑Besetzung für '{arbeit_min}' auf {anzahl_min} gesetzt.")
+            st.success(f"Mindest-Besetzung für {a_sel}: {anzahl}")
             st.rerun()
 
     if data["mindest_besetzung"]:
-        st.write("**Aktuelle Mindest‑Besetzungen:**")
-        df_min = pd.DataFrame(
-            list(data["mindest_besetzung"].items()), columns=["Arbeit", "Mindestens"]
+        dfmin = pd.DataFrame(
+            list(data["mindest_besetzung"].items()),
+            columns=["Arbeit", "Mindestens"]
         )
-        st.dataframe(df_min, use_container_width=True, hide_index=True)
-
-        if st.button("🗑️ Alle Besetzungsregeln löschen"):
+        st.dataframe(dfmin, use_container_width=True, hide_index=True)
+        if st.button("🗑️ Alle Besetzungsregeln löschen"):
             data["mindest_besetzung"].clear()
             save_data(data)
             st.rerun()
     else:
-        st.info("Keine Mindest‑Besetzungen definiert.")
+        st.info("Keine Mindest-Besetzungen vorhanden")
 
 
 # ============================================================
-# 3️⃣ TAB – STATISTIK
+# 3️⃣ TAB – STATISTIK
 # ============================================================
 
 with tab3:
-    st.header("📊 Statistik (8 Wochen)")
+    st.header("📊 Statistik der letzten 8 Wochen")
     statistik = statistik_wochen(8)
     if not statistik:
-        st.info("Noch keine Schichtdaten vorhanden.")
+        st.info("Noch keine Daten.")
     else:
         for person, daten in statistik.items():
             st.subheader(f"👤 {person}")
             df_stat = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-            df_stat = df_stat.sort_values(by="Anzahl", ascending=False)
             st.bar_chart(df_stat.set_index("Arbeit"))
             st.dataframe(df_stat, use_container_width=True, hide_index=True)
-    st.markdown("📅 Zeitraum: letzte 8 Wochen")
+    st.markdown("📅 Zeitraum: letzte **8 Wochen**")
