@@ -121,7 +121,7 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik mit Bahnhof max 4 + Sonstiges
+# 🧠 Plan-Logik
 # ============================================================
 
 def generiere_plan(zeitraum_label):
@@ -169,26 +169,9 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Bahnhof max 4, Rest → Sonstiges
-    bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
-    # Bereits geplante Bahnhof-Mitarbeiter zählen
-    bereits_bahnhof = [p for a, p in plan if a == "Bahnhof"]
-    bahnhof_mitarbeiter = bereits_bahnhof.copy()
-    sonstiges_mitarbeiter = []
-
+    # Bahnhof + Sonstiges: Alle verbleibenden Mitarbeiter
     for person in verfuegbar:
-        if len(bahnhof_mitarbeiter) < bahnhof_max:
-            bahnhof_mitarbeiter.append(person)
-        else:
-            sonstiges_mitarbeiter.append(person)
-
-    # Alte Bahnhof-Zuweisungen aus Plan entfernen
-    plan = [entry for entry in plan if entry[0] != "Bahnhof"]
-
-    for person in bahnhof_mitarbeiter:
-        plan.append(("Bahnhof", person))
-    for person in sonstiges_mitarbeiter:
-        plan.append(("Sonstiges", person))
+        plan.append(("Bahnhof", person))  # Erst alles auf Bahnhof, Anzeige begrenzt später
 
     return {
         "type": zeitraum_label,
@@ -292,12 +275,21 @@ with tab1:
             df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
             df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
             df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
+
+            # Max 4 Mitarbeiter für Bahnhof, Rest → Sonstiges
+            bahnhof = df_grouped["Bahnhof"] if "Bahnhof" in df_grouped else []
+            if len(bahnhof) > 4:
+                df_grouped["Bahnhof"] = bahnhof[:4]
+                df_grouped["Sonstiges"] = df_grouped.get("Sonstiges", []) + bahnhof[4:]
+
+            # Alle Spalten auf gleiche Länge bringen
             max_len = df_grouped.apply(len).max()
             df_expanded = pd.DataFrame({
                 a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
                 for a in df_grouped.index
             })
             st.dataframe(df_expanded, use_container_width=True, hide_index=True)
+
             if st.button(f"💾 {zeitraum_label} speichern"):
                 plan_speichern(plan)
                 st.success(f"Plan für {zeitraum_label} gespeichert ✅")
