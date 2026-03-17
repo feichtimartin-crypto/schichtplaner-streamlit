@@ -76,7 +76,6 @@ def save_data(data):
 
 data = load_data()
 
-# Sicherheits-Upgrade
 for k in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
     if k not in data:
         data[k] = {}
@@ -155,14 +154,12 @@ def generiere_plan(zeitraum_label):
         min_soll = data["mindest_besetzung"].get(arbeit, 1)
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
-        # Mindest auffüllen
         while len([p for a, p in plan if a == arbeit]) < min_soll and verfuegbar:
             kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
             person = random.choice(kandidaten)
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-        # Max auffüllen
         while len([p for a, p in plan if a == arbeit]) < max_soll and verfuegbar:
             kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
             person = random.choice(kandidaten)
@@ -171,7 +168,7 @@ def generiere_plan(zeitraum_label):
 
     # Bahnhof + Sonstiges: Alle verbleibenden Mitarbeiter
     for person in verfuegbar:
-        plan.append(("Bahnhof", person))  # Erst alles auf Bahnhof, Anzeige begrenzt später
+        plan.append(("Bahnhof", person))
 
     return {
         "type": zeitraum_label,
@@ -281,6 +278,13 @@ with tab1:
             if len(bahnhof) > 4:
                 df_grouped["Bahnhof"] = bahnhof[:4]
                 df_grouped["Sonstiges"] = df_grouped.get("Sonstiges", []) + bahnhof[4:]
+
+            # Spaltennamen ändern
+            rename_map = {
+                "Bahnhof Tugger": "Tugger",
+                "Wareneingang": "WE"
+            }
+            df_grouped = df_grouped.rename(index=rename_map)
 
             # Alle Spalten auf gleiche Länge bringen
             max_len = df_grouped.apply(len).max()
