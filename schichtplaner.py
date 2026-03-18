@@ -77,8 +77,9 @@ def save_data(data):
 data = load_data()
 
 # 🔹 Feste Mitarbeiter hinzufügen (EINZIGE ERGÄNZUNG)
-FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick", "Peter", "Marcin K.", "Daniel", "Damian", "Rene",
-                    "Marcin C.", "Krzystof", "Jakub", "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna"", "Klaudia", "Ryzard", "Muhamad"]
+FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick", "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Krzystof", "Jakub", "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna"", "Klaudia", "Ryzard", "Muhamad"]
+
+
 for name in FIXE_MITARBEITER:
     if name not in data["mitarbeiter"]:
         data["mitarbeiter"].append(name)
