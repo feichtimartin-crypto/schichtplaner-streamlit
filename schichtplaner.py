@@ -58,11 +58,8 @@ DEFAULT_MAX = {
 # ============================================================
 
 def load_data():
-    if DATA_FILE.exists():
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {
-        "mitarbeiter": [],
+    default_data = {
+        "mitarbeiter": ["Martin", "Nikolaj", "Eric", "Abdullah"],
         "arbeiten": [],
         "eintraege": [],
         "feste_positionen": {},
@@ -70,18 +67,28 @@ def load_data():
         "max_besetzung": {}
     }
 
+    if DATA_FILE.exists():
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Sicherstellen, dass fixe Mitarbeiter immer existieren
+        for name in default_data["mitarbeiter"]:
+            if name not in data.get("mitarbeiter", []):
+                data["mitarbeiter"].append(name)
+
+        return data
+
+    return default_data
+
+
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+
 data = load_data()
 
-# 🔹 Feste Mitarbeiter automatisch hinzufügen
-FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah"]
-for name in FIXE_MITARBEITER:
-    if name not in data["mitarbeiter"]:
-        data["mitarbeiter"].append(name)
-
+# Sicherheits-Upgrade
 for k in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
     if k not in data:
         data[k] = {}
@@ -142,7 +149,6 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
-    # feste Positionen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
@@ -153,10 +159,10 @@ def generiere_plan(zeitraum_label):
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
 
-    # Zuerst alle Arbeiten außer Bahnhof/Sonstiges
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
+
         min_soll = data["mindest_besetzung"].get(arbeit, 1)
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
@@ -187,15 +193,7 @@ def plan_speichern(plan):
 
 def get_recent_entries(weeks=8):
     cutoff = datetime.now() - timedelta(weeks=weeks)
-    result = []
-    for e in data["eintraege"]:
-        try:
-            d = datetime.strptime(e["date"], "%Y-%m-%d")
-            if d >= cutoff:
-                result.append(e)
-        except:
-            pass
-    return result
+    return [e for e in data["eintraege"] if datetime.strptime(e["date"], "%Y-%m-%d") >= cutoff]
 
 def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
@@ -206,95 +204,53 @@ def statistik_wochen(weeks=8):
     return statistik
 
 # ============================================================
-# 🧭 Streamlit UI
+# 🧭 UI
 # ============================================================
 
 st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
 st.title("🗓 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
-
-arbeitsplatz_reihenfolge = [
-    "Bahnhof",
-    "Bahnhof Stapler",
-    "Bahnhof Tugger",
-    "Wareneingang",
-    "Frunks",
-    "Door´s Stapler",
-    "Door´s Tugger",
-    "Sonstiges",
-    "Teamlead",
-    "S3"
-]
+tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik"])
 
 # ------------------- PLANUNG -------------------
 with tab1:
-    st.header("🗓 Planung")
-    st.subheader("🚫 Abwesenheiten (Urlaub / Krank)")
+    st.header("Planung")
 
-    if "abwesend" not in st.session_state:
-        st.session_state["abwesend"] = set()
-
-    if not data["mitarbeiter"]:
-        st.info("Noch keine Mitarbeitenden angelegt.")
-    else:
-        n = 4
-        rows = [data["mitarbeiter"][i:i+n] for i in range(0, len(data["mitarbeiter"]), n)]
-        abwesende = set(st.session_state["abwesend"])
-        tmp = set()
-        for row in rows:
-            cols = st.columns(len(row))
-            for col, name in zip(cols, row):
-                checked = col.checkbox(name, value=(name in abwesende))
-                if checked:
-                    tmp.add(name)
-        st.session_state["abwesend"] = tmp
-        if tmp:
-            st.warning("❎ Abwesend: " + ", ".join(tmp))
-        else:
-            st.success("✅ Alle verfügbar")
-
-    st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("📅 Plan Mo/Di erstellen"):
-            plan = generiere_plan("MoDi")
-            if plan:
-                st.session_state["plan_modi"] = plan
-                st.success("Plan Mo/Di erstellt!")
-    with c2:
-        if st.button("📅 Plan Mi–Fr erstellen"):
-            plan = generiere_plan("MiFr")
-            if plan:
-                st.session_state["plan_mifr"] = plan
-                st.success("Plan Mi–Fr erstellt!")
-
-    st.divider()
-    for key, zeitraum_label in [("plan_modi", "Mo/Di"), ("plan_mifr", "Mi–Fr")]:
-        plan = st.session_state.get(key, None)
+    if st.button("Plan erstellen"):
+        plan = generiere_plan("Standard")
         if plan:
-            st.subheader(f"📋 Plan {zeitraum_label}")
-            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
-            df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
-            max_len = df_grouped.apply(len).max()
-            df_expanded = pd.DataFrame({
-                a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
-                for a in df_grouped.index
-            })
-            st.dataframe(df_expanded, use_container_width=True, hide_index=True)
-            if st.button(f"💾 {zeitraum_label} speichern"):
-                plan_speichern(plan)
-                st.success(f"Plan für {zeitraum_label} gespeichert ✅")
-        else:
-            st.info(f"Kein Plan für {zeitraum_label} generiert.")
+            st.session_state["plan"] = plan
+
+    plan = st.session_state.get("plan")
+    if plan:
+        df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
+        st.dataframe(df)
+
+# ------------------- VERWALTUNG -------------------
+with tab2:
+    st.header("Verwaltung")
+
+    pw = st.text_input("Passwort", type="password")
+    if pw != ADMIN_PASSWORD:
+        st.stop()
+
+    st.subheader("Mitarbeiter")
+    new = st.text_input("Neu")
+    if st.button("Hinzufügen"):
+        add_mitarbeiter(new)
+        st.rerun()
+
+    st.write(data["mitarbeiter"])
 
 # ------------------- STATISTIK -------------------
 with tab3:
-    st.header("📊 Statistik der letzten 8 Wochen")
+    st.header("Statistik")
 
-    if st.button("🗑️ Alle Statistikdaten löschen"):
+    if st.button("Alles löschen"):
         data["eintraege"] = []
         save_data(data)
-        st.success("Alle Statistikdaten gelöscht!")
-        st.experimental_rerun()
+        st.success("Gelöscht")
+        st.rerun()
+
+    stats = statistik_wochen()
+    st.write(stats)
