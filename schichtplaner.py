@@ -150,12 +150,27 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
+    # Historien-Zähler: wie oft hatte jede Person welche Arbeit
     count = defaultdict(lambda: defaultdict(int))
+    gesamt = defaultdict(int)  # Gesamteinsätze pro Person
     for e in data["eintraege"]:
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
+            gesamt[person] += 1
 
-    # Zuerst alle Arbeiten außer Bahnhof/Sonstiges
+    def fairer_kandidat(verfuegbar_liste, arbeit):
+        """
+        Wählt den fairsten Kandidaten:
+        1. Wer diese Arbeit am seltensten hatte (arbeitsspezifisch)
+        2. Bei Gleichstand: wer insgesamt am wenigsten eingeteilt wurde
+        3. Kein Zufall mehr – immer der objektiv fairste
+        """
+        return sorted(
+            verfuegbar_liste,
+            key=lambda p: (count[p][arbeit], gesamt[p])
+        )[0]
+
+    # Alle Arbeiten außer Bahnhof/Sonstiges fair verteilen
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -163,28 +178,39 @@ def generiere_plan(zeitraum_label):
         max_soll = data["max_besetzung"].get(arbeit, min_soll)
 
         while len([p for a, p in plan if a == arbeit]) < min_soll and verfuegbar:
-            kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
-            person = random.choice(kandidaten)
+            person = fairer_kandidat(verfuegbar, arbeit)
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
         while len([p for a, p in plan if a == arbeit]) < max_soll and verfuegbar:
-            kandidaten = sorted(verfuegbar, key=lambda p: count[p][arbeit])
-            person = random.choice(kandidaten)
+            person = fairer_kandidat(verfuegbar, arbeit)
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # ✅ GEÄNDERT: Bahnhof max 4 MA, Rest geht in Sonstiges
+    # Bahnhof fair verteilen (max 4), Rest fair auf Sonstiges
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_aktuell = len([p for a, p in plan if a == "Bahnhof"])
     bahnhof_frei = max(0, bahnhof_max - bahnhof_aktuell)
 
-    for person in verfuegbar:
+    # Übrige Mitarbeiter fair auf Bahnhof und Sonstiges aufteilen
+    # Wer Bahnhof seltener hatte bekommt Vorrang für Bahnhof,
+    # wer Sonstiges seltener hatte bekommt Vorrang für Sonstiges
+    restliche = list(verfuegbar)
+    restliche_bahnhof = sorted(restliche, key=lambda p: (count[p]["Bahnhof"], gesamt[p]))
+    zugeteilt = set()
+
+    for person in restliche_bahnhof:
         if bahnhof_frei > 0:
             plan.append(("Bahnhof", person))
             bahnhof_frei -= 1
-        else:
-            plan.append(("Sonstiges", person))
+            zugeteilt.add(person)
+
+    restliche_sonstiges = sorted(
+        [p for p in restliche if p not in zugeteilt],
+        key=lambda p: (count[p]["Sonstiges"], gesamt[p])
+    )
+    for person in restliche_sonstiges:
+        plan.append(("Sonstiges", person))
 
     return {
         "type": zeitraum_label,
