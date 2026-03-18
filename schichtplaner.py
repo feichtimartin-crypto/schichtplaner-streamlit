@@ -371,12 +371,36 @@ with tab2:
     if data["mindest_besetzung"]:
         df_min = pd.DataFrame(data["mindest_besetzung"].items(), columns=["Arbeit", "Min. Personen"])
         st.dataframe(df_min, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle löschen"):
+        if st.button("🗑️ Alle löschen", key="del_min"):
             data["mindest_besetzung"].clear()
             save_data(data)
             st.rerun()
     else:
         st.info("Keine Mindestregelungen gesetzt.")
+
+    st.divider()
+    st.subheader("👥 Maximal-Besetzung")
+    if data["arbeiten"]:
+        job_max = st.selectbox("Arbeit wählen:", ["–"] + data["arbeiten"], key="max_job")
+        anzahl_max = st.number_input("Maximal erlaubte Personen:", min_value=1, max_value=999, step=1, key="max_anzahl")
+        if job_max != "–" and st.button("💾 Speichern", key="save_max"):
+            data["max_besetzung"][job_max] = anzahl_max
+            save_data(data)
+            st.success(f"Maximal-Besetzung für {job_max}: {anzahl_max}")
+            st.rerun()
+
+    if data["max_besetzung"]:
+        df_max = pd.DataFrame(
+            [(k, v if v != 999 else "∞") for k, v in data["max_besetzung"].items()],
+            columns=["Arbeit", "Max. Personen"]
+        )
+        st.dataframe(df_max, use_container_width=True, hide_index=True)
+        if st.button("🗑️ Alle löschen", key="del_max"):
+            data["max_besetzung"].clear()
+            save_data(data)
+            st.rerun()
+    else:
+        st.info("Keine Maximalregelungen gesetzt.")
 
 # ------------------- STATISTIK -------------------
 with tab3:
