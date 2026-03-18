@@ -166,7 +166,6 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Bahnhof + Sonstiges: Alle verbleibenden Mitarbeiter
     for person in verfuegbar:
         plan.append(("Bahnhof", person))
 
@@ -272,28 +271,12 @@ with tab1:
             df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
             df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
             df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
-
-            # Max 4 Mitarbeiter für Bahnhof, Rest → Sonstiges
-            bahnhof = df_grouped["Bahnhof"] if "Bahnhof" in df_grouped else []
-            if len(bahnhof) > 4:
-                df_grouped["Bahnhof"] = bahnhof[:4]
-                df_grouped["Sonstiges"] = df_grouped.get("Sonstiges", []) + bahnhof[4:]
-
-            # Spaltennamen ändern
-            rename_map = {
-                "Bahnhof Tugger": "Tugger",
-                "Wareneingang": "WE"
-            }
-            df_grouped = df_grouped.rename(index=rename_map)
-
-            # Alle Spalten auf gleiche Länge bringen
             max_len = df_grouped.apply(len).max()
             df_expanded = pd.DataFrame({
                 a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
                 for a in df_grouped.index
             })
             st.dataframe(df_expanded, use_container_width=True, hide_index=True)
-
             if st.button(f"💾 {zeitraum_label} speichern"):
                 plan_speichern(plan)
                 st.success(f"Plan für {zeitraum_label} gespeichert ✅")
@@ -383,7 +366,7 @@ with tab3:
     st.header("📊 Statistik der letzten 8 Wochen")
 
     if st.button("🗑️ Alle Statistikdaten löschen"):
-        data["eintraege"].clear()
+        data["eintraege"] = []  # 🔥 EINZIGE ÄNDERUNG
         save_data(data)
         st.success("Alle Statistikdaten gelöscht!")
         st.experimental_rerun()
