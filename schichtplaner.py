@@ -76,7 +76,7 @@ def save_data(data):
 
 data = load_data()
 
-# 🔹 Feste Mitarbeiter hinzufügen (EINZIGE ERGÄNZUNG)
+# 🔹 Feste Mitarbeiter hinzufügen
 FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick", "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin", "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub", "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"]
 for name in FIXE_MITARBEITER:
     if name not in data["mitarbeiter"]:
@@ -174,8 +174,17 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
+    # ✅ GEÄNDERT: Bahnhof max 4 MA, Rest geht in Sonstiges
+    bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
+    bahnhof_aktuell = len([p for a, p in plan if a == "Bahnhof"])
+    bahnhof_frei = max(0, bahnhof_max - bahnhof_aktuell)
+
     for person in verfuegbar:
-        plan.append(("Bahnhof", person))
+        if bahnhof_frei > 0:
+            plan.append(("Bahnhof", person))
+            bahnhof_frei -= 1
+        else:
+            plan.append(("Sonstiges", person))
 
     return {
         "type": zeitraum_label,
