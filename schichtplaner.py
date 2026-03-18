@@ -76,6 +76,12 @@ def save_data(data):
 
 data = load_data()
 
+# 🔹 Feste Mitarbeiter automatisch hinzufügen
+FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah"]
+for name in FIXE_MITARBEITER:
+    if name not in data["mitarbeiter"]:
+        data["mitarbeiter"].append(name)
+
 for k in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
     if k not in data:
         data[k] = {}
@@ -283,103 +289,12 @@ with tab1:
         else:
             st.info(f"Kein Plan für {zeitraum_label} generiert.")
 
-# ------------------- VERWALTUNG -------------------
-with tab2:
-    st.header("🔒 Verwaltung")
-    password = st.text_input("Passwort:", type="password")
-    if password != ADMIN_PASSWORD:
-        st.warning("Zugriff verweigert – falsches Passwort.")
-        st.stop()
-    st.success("✅ Zugriff erlaubt")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("👤 Mitarbeitende")
-        new = st.text_input("Neue/r Mitarbeiter*in:")
-        if st.button("➕ Hinzufügen"):
-            add_mitarbeiter(new)
-            st.rerun()
-        if data["mitarbeiter"]:
-            sel = st.selectbox("Entfernen:", ["–"] + data["mitarbeiter"])
-            if sel != "–" and st.button("❌ Entfernen"):
-                remove_mitarbeiter(sel)
-                st.rerun()
-        st.write("**Aktuell:**", ", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_leer_")
-
-    with col2:
-        st.subheader("🧰 Arbeiten")
-        newa = st.text_input("Neue Arbeit:")
-        if st.button("➕ Arbeit hinzufügen"):
-            add_arbeit(newa)
-            st.rerun()
-        if data["arbeiten"]:
-            sela = st.selectbox("Arbeit löschen:", ["–"] + data["arbeiten"])
-            if sela != "–" and st.button("❌ Arbeit löschen"):
-                remove_arbeit(sela)
-                st.rerun()
-        st.write("**Aktuell:**", ", ".join(data["arbeiten"]) if data["arbeiten"] else "_leer_")
-
-    st.divider()
-    st.subheader("📌 Feste Positionen")
-    if data["mitarbeiter"] and data["arbeiten"]:
-        pers = st.selectbox("Mitarbeiter:", ["–"] + data["mitarbeiter"])
-        job = st.selectbox("Feste Arbeit:", ["–"] + data["arbeiten"])
-        if pers != "–" and job != "–" and st.button("📍 Fixierung setzen"):
-            data["feste_positionen"][pers] = job
-            save_data(data)
-            st.success(f"{pers} dauerhaft auf {job} gesetzt")
-            st.rerun()
-
-    if data["feste_positionen"]:
-        df_fix = pd.DataFrame(data["feste_positionen"].items(), columns=["Mitarbeiter", "Arbeit"])
-        st.dataframe(df_fix, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle Fixierungen löschen"):
-            data["feste_positionen"].clear()
-            save_data(data)
-            st.rerun()
-    else:
-        st.info("Keine festen Positionen.")
-
-    st.divider()
-    st.subheader("👥 Mindest-Besetzung")
-    if data["arbeiten"]:
-        job = st.selectbox("Arbeit wählen:", ["–"] + data["arbeiten"])
-        anzahl = st.number_input("Mindestens benötigte Personen:", min_value=1, max_value=10, step=1)
-        if job != "–" and st.button("💾 Speichern"):
-            data["mindest_besetzung"][job] = anzahl
-            save_data(data)
-            st.success(f"Mindest-Besetzung für {job}: {anzahl}")
-            st.rerun()
-
-    if data["mindest_besetzung"]:
-        df_min = pd.DataFrame(data["mindest_besetzung"].items(), columns=["Arbeit", "Min. Personen"])
-        st.dataframe(df_min, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle löschen"):
-            data["mindest_besetzung"].clear()
-            save_data(data)
-            st.rerun()
-    else:
-        st.info("Keine Mindestregelungen gesetzt.")
-
 # ------------------- STATISTIK -------------------
 with tab3:
     st.header("📊 Statistik der letzten 8 Wochen")
 
     if st.button("🗑️ Alle Statistikdaten löschen"):
-        data["eintraege"] = []  # 🔥 EINZIGE ÄNDERUNG
+        data["eintraege"] = []
         save_data(data)
         st.success("Alle Statistikdaten gelöscht!")
         st.experimental_rerun()
-
-    stats = statistik_wochen(8)
-    if not stats:
-        st.info("Noch keine Daten.")
-    else:
-        for person, daten in stats.items():
-            if person in ["S3", "Teamlead"]:
-                continue
-            st.subheader(f"👤 {person}")
-            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-            st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
-    st.markdown("📅 Betrachtungszeitraum: **8 Wochen**")
