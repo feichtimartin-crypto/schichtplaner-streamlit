@@ -386,7 +386,7 @@ with tab3:
         data["eintraege"] = []
         save_data(data)
         st.success("Alle Statistikdaten gelöscht!")
-        st.experimental_rerun()
+        st.rerun()
 
     stats = statistik_wochen(8)
     if not stats:
