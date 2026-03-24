@@ -318,4 +318,4 @@ with tab1:
         if st.button("\ud83d\udcc5 Plan Mo/Di erstellen"):
             plan = generiere_plan("MoDi")
             if plan:
-                st.session_state["plan
+                st.session_state["plan_modi"] = plan
