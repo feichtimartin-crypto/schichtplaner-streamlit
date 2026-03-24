@@ -46,7 +46,8 @@
   "feste_positionen": {
     "Peter": "Wareneingang",
     "Rene": "Wareneingang",
-    "Fabian": "Bahnhof"
+    "Fabian": "Bahnhof",
+    "Martin": "Teamlead"
   },
   "mindest_besetzung": {
     "Teamlead": 1,
