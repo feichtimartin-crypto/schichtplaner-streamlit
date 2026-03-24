@@ -270,6 +270,128 @@
           "Lukasz"
         ]
       ]
+    },
+    {
+      "type": "MoDi",
+      "date": "2026-03-24",
+      "plan": [
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Teamlead",
+          "Ryzard"
+        ],
+        [
+          "Teamlead",
+          "Muhamad"
+        ],
+        [
+          "S3",
+          "Anna"
+        ],
+        [
+          "S3",
+          "Klaudia"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Abdullah"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Marcin K."
+        ],
+        [
+          "Bahnhof Stapler",
+          "Daniel"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Martin"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Nikolaj"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Eric"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Jaroslaw"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Adrian"
+        ],
+        [
+          "Wareneingang",
+          "Monthe"
+        ],
+        [
+          "Wareneingang",
+          "Patrick"
+        ],
+        [
+          "Frunks",
+          "Marcin C."
+        ],
+        [
+          "Door's Stapler",
+          "Damian"
+        ],
+        [
+          "Door's Tugger",
+          "Kevin"
+        ],
+        [
+          "Bahnhof",
+          "Ebrahim"
+        ],
+        [
+          "Bahnhof",
+          "Lukasz"
+        ],
+        [
+          "Bahnhof",
+          "Kamil"
+        ],
+        [
+          "Sonstiges",
+          "Tomasz"
+        ],
+        [
+          "Sonstiges",
+          "Maciej"
+        ],
+        [
+          "Sonstiges",
+          "Krzystof"
+        ],
+        [
+          "Sonstiges",
+          "Jakub"
+        ],
+        [
+          "Sonstiges",
+          "Radoslaw"
+        ],
+        [
+          "Sonstiges",
+          "Vazir"
+        ]
+      ]
     }
   ],
   "feste_positionen": {
