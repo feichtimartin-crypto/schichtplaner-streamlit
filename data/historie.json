@@ -151,7 +151,8 @@
     }
   ],
   "feste_positionen": {
-    "Peter": "Wareneingang"
+    "Peter": "Wareneingang",
+    "Rene": "Wareneingang"
   },
   "mindest_besetzung": {
     "Teamlead": 1,
