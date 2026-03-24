@@ -1,66 +1,72 @@
 import streamlit as st
 import json
-import random
+import base64
+import requests
 import pandas as pd
 from datetime import datetime, timedelta
-from pathlib import Path
 from collections import defaultdict, Counter
 
 # ============================================================
-# 🔸 Grundeinstellungen
+# \ud83d\udd38 GitHub-basierte Datenpersistenz
+# ============================================================
+# Lege in Streamlit Cloud unter Settings > Secrets folgendes an:
+#
+# [github]
+# token = "ghp_deinPersonalAccessToken"
+# repo  = "deinUsername/deinRepo"
+# path  = "data/historie.json"
 # ============================================================
 
-DATA_FILE = Path("data/historie.json")
-DATA_FILE.parent.mkdir(exist_ok=True)
+GITHUB_API = "https://api.github.com"
 ADMIN_PASSWORD = "Nikolajistcoll"
 
 DEFAULT_ARBEITEN = [
-    "Teamlead",
-    "S3",
-    "Bahnhof",
-    "Bahnhof Stapler",
-    "Bahnhof Tugger",
-    "Wareneingang",
-    "Frunks",
-    "Door´s Stapler",
-    "Door´s Tugger",
-    "Sonstiges"
+    "Teamlead", "S3", "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger",
+    "Wareneingang", "Frunks", "Door\u00b4s Stapler", "Door\u00b4s Tugger", "Sonstiges"
 ]
 
 DEFAULT_MIN = {
-    "Teamlead": 1,
-    "S3": 1,
-    "Bahnhof": 2,
-    "Bahnhof Stapler": 3,
-    "Bahnhof Tugger": 5,
-    "Wareneingang": 3,
-    "Frunks": 1,
-    "Door´s Stapler": 1,
-    "Door´s Tugger": 1,
-    "Sonstiges": 0
+    "Teamlead": 1, "S3": 1, "Bahnhof": 2, "Bahnhof Stapler": 3,
+    "Bahnhof Tugger": 5, "Wareneingang": 3, "Frunks": 1,
+    "Door\u00b4s Stapler": 1, "Door\u00b4s Tugger": 1, "Sonstiges": 0
 }
 
 DEFAULT_MAX = {
-    "Teamlead": 2,
-    "S3": 2,
-    "Bahnhof": 4,
-    "Bahnhof Stapler": 3,
-    "Bahnhof Tugger": 5,
-    "Wareneingang": 4,
-    "Frunks": 1,
-    "Door´s Stapler": 1,
-    "Door´s Tugger": 1,
-    "Sonstiges": 999
+    "Teamlead": 2, "S3": 2, "Bahnhof": 4, "Bahnhof Stapler": 3,
+    "Bahnhof Tugger": 5, "Wareneingang": 4, "Frunks": 1,
+    "Door\u00b4s Stapler": 1, "Door\u00b4s Tugger": 1, "Sonstiges": 999
 }
 
+FIXE_MITARBEITER = [
+    "Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick",
+    "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin",
+    "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub",
+    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"
+]
+
+ARBEITSPLATZ_REIHENFOLGE = [
+    "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger", "Wareneingang",
+    "Frunks", "Door\u00b4s Stapler", "Door\u00b4s Tugger", "Sonstiges", "Teamlead", "S3"
+]
+
 # ============================================================
-# 🔹 Datenverwaltung
+# \ud83d\udd39 GitHub Datenverwaltung
 # ============================================================
 
-def load_data():
-    if DATA_FILE.exists():
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+def _headers():
+    token = st.secrets["github"]["token"]
+    return {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+def _repo():
+    return st.secrets["github"]["repo"]
+
+def _path():
+    return st.secrets["github"]["path"]
+
+def _empty_data():
     return {
         "mitarbeiter": [],
         "arbeiten": [],
@@ -70,20 +76,57 @@ def load_data():
         "max_besetzung": {}
     }
 
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def load_data() -> dict:
+    url = f"{GITHUB_API}/repos/{_repo()}/contents/{_path()}"
+    try:
+        r = requests.get(url, headers=_headers(), timeout=10)
+        if r.status_code == 404:
+            return _empty_data()
+        r.raise_for_status()
+        content = r.json()["content"]
+        decoded = base64.b64decode(content).decode("utf-8")
+        return json.loads(decoded)
+    except Exception as e:
+        st.error(f"\u274c Fehler beim Laden der Daten: {e}")
+        return _empty_data()
+
+def save_data(data: dict) -> bool:
+    url = f"{GITHUB_API}/repos/{_repo()}/contents/{_path()}"
+    sha = None
+    try:
+        r = requests.get(url, headers=_headers(), timeout=10)
+        if r.status_code == 200:
+            sha = r.json()["sha"]
+    except Exception:
+        pass
+
+    content = base64.b64encode(
+        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    ).decode("utf-8")
+
+    payload = {"message": "Schichtplan Update", "content": content}
+    if sha:
+        payload["sha"] = sha
+
+    try:
+        r = requests.put(url, headers=_headers(), json=payload, timeout=15)
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        st.error(f"\u274c Fehler beim Speichern: {e}")
+        return False
+
+# ============================================================
+# \ud83d\udd39 Daten laden & initialisieren
+# ============================================================
 
 data = load_data()
 
-# 🔹 Feste Mitarbeiter – Reihenfolge wird immer erzwungen
-FIXE_MITARBEITER = ["Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick", "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin", "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub", "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"]
-# Feste MA zuerst in der definierten Reihenfolge, danach alle manuell hinzugefügten
+# Reihenfolge der Mitarbeiter sicherstellen
 extras = [m for m in data["mitarbeiter"] if m not in FIXE_MITARBEITER]
 data["mitarbeiter"] = FIXE_MITARBEITER + extras
-save_data(data)
 
-# Sicherheits-Upgrade
+# Fehlende Keys auff\u00fcllen
 for k in ["feste_positionen", "mindest_besetzung", "max_besetzung"]:
     if k not in data:
         data[k] = {}
@@ -94,6 +137,7 @@ if not data["arbeiten"]:
 for a, v in DEFAULT_MIN.items():
     if a not in data["mindest_besetzung"]:
         data["mindest_besetzung"][a] = v
+
 for a, v in DEFAULT_MAX.items():
     if a not in data["max_besetzung"]:
         data["max_besetzung"][a] = v
@@ -101,7 +145,7 @@ for a, v in DEFAULT_MAX.items():
 save_data(data)
 
 # ============================================================
-# ⚙️ Hilfsfunktionen
+# \u2699\ufe0f Hilfsfunktionen
 # ============================================================
 
 def add_mitarbeiter(name):
@@ -128,49 +172,42 @@ def remove_arbeit(arbeit):
         save_data(data)
 
 # ============================================================
-# 🧠 Plan-Logik
+# \ud83e\udde0 Plan-Logik
 # ============================================================
 
 def generiere_plan(zeitraum_label):
     mitarbeiter = data["mitarbeiter"]
     arbeiten = data["arbeiten"]
-
     abwesende = st.session_state.get("abwesend", set())
     verfuegbar = [m for m in mitarbeiter if m not in abwesende]
 
     if not verfuegbar or not arbeiten:
-        st.warning("Bitte zuerst Mitarbeiter und Arbeiten hinzufügen!")
+        st.warning("Bitte zuerst Mitarbeiter und Arbeiten hinzuf\u00fcgen!")
         return None
 
     plan = []
 
-    # feste Positionen zuerst
+    # Feste Positionen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Historien-Zähler: wie oft hatte jede Person welche Arbeit
+    # Historien-Z\u00e4hler
     count = defaultdict(lambda: defaultdict(int))
-    gesamt = defaultdict(int)  # Gesamteinsätze pro Person
+    gesamt = defaultdict(int)
     for e in data["eintraege"]:
         for arbeit, person in e["plan"]:
             count[person][arbeit] += 1
             gesamt[person] += 1
 
     def fairer_kandidat(verfuegbar_liste, arbeit):
-        """
-        Wählt den fairsten Kandidaten:
-        1. Wer diese Arbeit am seltensten hatte (arbeitsspezifisch)
-        2. Bei Gleichstand: wer insgesamt am wenigsten eingeteilt wurde
-        3. Kein Zufall mehr – immer der objektiv fairste
-        """
         return sorted(
             verfuegbar_liste,
             key=lambda p: (count[p][arbeit], gesamt[p])
         )[0]
 
-    # Alle Arbeiten außer Bahnhof/Sonstiges fair verteilen
+    # Alle Arbeiten au\u00dfer Bahnhof/Sonstiges fair verteilen
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -187,14 +224,11 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Bahnhof fair verteilen (max 4), Rest fair auf Sonstiges
+    # Bahnhof & Sonstiges f\u00fcr \u00dcbrige
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_aktuell = len([p for a, p in plan if a == "Bahnhof"])
     bahnhof_frei = max(0, bahnhof_max - bahnhof_aktuell)
 
-    # Übrige Mitarbeiter fair auf Bahnhof und Sonstiges aufteilen
-    # Wer Bahnhof seltener hatte bekommt Vorrang für Bahnhof,
-    # wer Sonstiges seltener hatte bekommt Vorrang für Sonstiges
     restliche = list(verfuegbar)
     restliche_bahnhof = sorted(restliche, key=lambda p: (count[p]["Bahnhof"], gesamt[p]))
     zugeteilt = set()
@@ -230,7 +264,7 @@ def get_recent_entries(weeks=8):
             d = datetime.strptime(e["date"], "%Y-%m-%d")
             if d >= cutoff:
                 result.append(e)
-        except:
+        except Exception:
             pass
     return result
 
@@ -243,31 +277,18 @@ def statistik_wochen(weeks=8):
     return statistik
 
 # ============================================================
-# 🧭 Streamlit UI
+# \ud83e\udded Streamlit UI
 # ============================================================
 
-st.set_page_config(page_title="Schichtplaner", page_icon="🗓", layout="centered")
-st.title("🗓 Schichtplan-Manager")
+st.set_page_config(page_title="Schichtplaner", page_icon="\ud83d\uddd3", layout="centered")
+st.title("\ud83d\uddd3 Schichtplan-Manager")
 
-tab1, tab2, tab3 = st.tabs(["📋 Planung", "🔒 Verwaltung", "📊 Statistik (8 Wochen)"])
-
-arbeitsplatz_reihenfolge = [
-    "Bahnhof",
-    "Bahnhof Stapler",
-    "Bahnhof Tugger",
-    "Wareneingang",
-    "Frunks",
-    "Door´s Stapler",
-    "Door´s Tugger",
-    "Sonstiges",
-    "Teamlead",
-    "S3"
-]
+tab1, tab2, tab3 = st.tabs(["\ud83d\udccb Planung", "\ud83d\udd12 Verwaltung", "\ud83d\udcca Statistik (8 Wochen)"])
 
 # ------------------- PLANUNG -------------------
 with tab1:
-    st.header("🗓 Planung")
-    st.subheader("🚫 Abwesenheiten (Urlaub / Krank)")
+    st.header("\ud83d\uddd3 Planung")
+    st.subheader("\ud83d\udeab Abwesenheiten (Urlaub / Krank)")
 
     if "abwesend" not in st.session_state:
         st.session_state["abwesend"] = set()
@@ -287,166 +308,14 @@ with tab1:
                     tmp.add(name)
         st.session_state["abwesend"] = tmp
         if tmp:
-            st.warning("❎ Abwesend: " + ", ".join(tmp))
+            st.warning("\u274e Abwesend: " + ", ".join(tmp))
         else:
-            st.success("✅ Alle verfügbar")
+            st.success("\u2705 Alle verf\u00fcgbar")
 
     st.divider()
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("📅 Plan Mo/Di erstellen"):
+        if st.button("\ud83d\udcc5 Plan Mo/Di erstellen"):
             plan = generiere_plan("MoDi")
             if plan:
-                st.session_state["plan_modi"] = plan
-                st.success("Plan Mo/Di erstellt!")
-    with c2:
-        if st.button("📅 Plan Mi–Fr erstellen"):
-            plan = generiere_plan("MiFr")
-            if plan:
-                st.session_state["plan_mifr"] = plan
-                st.success("Plan Mi–Fr erstellt!")
-
-    st.divider()
-    for key, zeitraum_label in [("plan_modi", "Mo/Di"), ("plan_mifr", "Mi–Fr")]:
-        plan = st.session_state.get(key, None)
-        if plan:
-            st.subheader(f"📋 Plan {zeitraum_label}")
-            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(arbeitsplatz_reihenfolge)
-            df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
-            max_len = df_grouped.apply(len).max()
-            df_expanded = pd.DataFrame({
-                a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
-                for a in df_grouped.index
-            })
-            st.dataframe(df_expanded, use_container_width=True, hide_index=True)
-            if st.button(f"💾 {zeitraum_label} speichern"):
-                plan_speichern(plan)
-                st.success(f"Plan für {zeitraum_label} gespeichert ✅")
-        else:
-            st.info(f"Kein Plan für {zeitraum_label} generiert.")
-
-# ------------------- VERWALTUNG -------------------
-with tab2:
-    st.header("🔒 Verwaltung")
-    password = st.text_input("Passwort:", type="password")
-    if password != ADMIN_PASSWORD:
-        st.warning("Zugriff verweigert – falsches Passwort.")
-        st.stop()
-    st.success("✅ Zugriff erlaubt")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("👤 Mitarbeitende")
-        new = st.text_input("Neue/r Mitarbeiter*in:")
-        if st.button("➕ Hinzufügen"):
-            add_mitarbeiter(new)
-            st.rerun()
-        if data["mitarbeiter"]:
-            sel = st.selectbox("Entfernen:", ["–"] + data["mitarbeiter"])
-            if sel != "–" and st.button("❌ Entfernen"):
-                remove_mitarbeiter(sel)
-                st.rerun()
-        st.write("**Aktuell:**", ", ".join(data["mitarbeiter"]) if data["mitarbeiter"] else "_leer_")
-
-    with col2:
-        st.subheader("🧰 Arbeiten")
-        newa = st.text_input("Neue Arbeit:")
-        if st.button("➕ Arbeit hinzufügen"):
-            add_arbeit(newa)
-            st.rerun()
-        if data["arbeiten"]:
-            sela = st.selectbox("Arbeit löschen:", ["–"] + data["arbeiten"])
-            if sela != "–" and st.button("❌ Arbeit löschen"):
-                remove_arbeit(sela)
-                st.rerun()
-        st.write("**Aktuell:**", ", ".join(data["arbeiten"]) if data["arbeiten"] else "_leer_")
-
-    st.divider()
-    st.subheader("📌 Feste Positionen")
-    if data["mitarbeiter"] and data["arbeiten"]:
-        pers = st.selectbox("Mitarbeiter:", ["–"] + data["mitarbeiter"])
-        job = st.selectbox("Feste Arbeit:", ["–"] + data["arbeiten"])
-        if pers != "–" and job != "–" and st.button("📍 Fixierung setzen"):
-            data["feste_positionen"][pers] = job
-            save_data(data)
-            st.success(f"{pers} dauerhaft auf {job} gesetzt")
-            st.rerun()
-
-    if data["feste_positionen"]:
-        df_fix = pd.DataFrame(data["feste_positionen"].items(), columns=["Mitarbeiter", "Arbeit"])
-        st.dataframe(df_fix, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle Fixierungen löschen"):
-            data["feste_positionen"].clear()
-            save_data(data)
-            st.rerun()
-    else:
-        st.info("Keine festen Positionen.")
-
-    st.divider()
-    st.subheader("👥 Mindest-Besetzung")
-    if data["arbeiten"]:
-        job = st.selectbox("Arbeit wählen:", ["–"] + data["arbeiten"])
-        anzahl = st.number_input("Mindestens benötigte Personen:", min_value=1, max_value=10, step=1)
-        if job != "–" and st.button("💾 Speichern"):
-            data["mindest_besetzung"][job] = anzahl
-            save_data(data)
-            st.success(f"Mindest-Besetzung für {job}: {anzahl}")
-            st.rerun()
-
-    if data["mindest_besetzung"]:
-        df_min = pd.DataFrame(data["mindest_besetzung"].items(), columns=["Arbeit", "Min. Personen"])
-        st.dataframe(df_min, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle löschen", key="del_min"):
-            data["mindest_besetzung"].clear()
-            save_data(data)
-            st.rerun()
-    else:
-        st.info("Keine Mindestregelungen gesetzt.")
-
-    st.divider()
-    st.subheader("👥 Maximal-Besetzung")
-    if data["arbeiten"]:
-        job_max = st.selectbox("Arbeit wählen:", ["–"] + data["arbeiten"], key="max_job")
-        anzahl_max = st.number_input("Maximal erlaubte Personen:", min_value=1, max_value=999, step=1, key="max_anzahl")
-        if job_max != "–" and st.button("💾 Speichern", key="save_max"):
-            data["max_besetzung"][job_max] = anzahl_max
-            save_data(data)
-            st.success(f"Maximal-Besetzung für {job_max}: {anzahl_max}")
-            st.rerun()
-
-    if data["max_besetzung"]:
-        df_max = pd.DataFrame(
-            [(k, v if v != 999 else "∞") for k, v in data["max_besetzung"].items()],
-            columns=["Arbeit", "Max. Personen"]
-        )
-        st.dataframe(df_max, use_container_width=True, hide_index=True)
-        if st.button("🗑️ Alle löschen", key="del_max"):
-            data["max_besetzung"].clear()
-            save_data(data)
-            st.rerun()
-    else:
-        st.info("Keine Maximalregelungen gesetzt.")
-
-# ------------------- STATISTIK -------------------
-with tab3:
-    st.header("📊 Statistik der letzten 8 Wochen")
-
-    if st.button("🗑️ Alle Statistikdaten löschen"):
-        data["eintraege"] = []
-        save_data(data)
-        st.success("Alle Statistikdaten gelöscht!")
-        st.rerun()
-
-    stats = statistik_wochen(8)
-    if not stats:
-        st.info("Noch keine Daten.")
-    else:
-        for person, daten in stats.items():
-            if person in ["S3", "Teamlead"]:
-                continue
-            st.subheader(f"👤 {person}")
-            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-            st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
-    st.markdown("📅 Betrachtungszeitraum: **8 Wochen**")
+                st.session_state["plan
