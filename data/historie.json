@@ -148,6 +148,128 @@
           "Lukasz"
         ]
       ]
+    },
+    {
+      "type": "MoDi",
+      "date": "2026-03-24",
+      "plan": [
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Teamlead",
+          "Anna"
+        ],
+        [
+          "Teamlead",
+          "Klaudia"
+        ],
+        [
+          "S3",
+          "Ryzard"
+        ],
+        [
+          "S3",
+          "Muhamad"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Martin"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Nikolaj"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Eric"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Abdullah"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Monthe"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Patrick"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kevin"
+        ],
+        [
+          "Wareneingang",
+          "Marcin K."
+        ],
+        [
+          "Wareneingang",
+          "Daniel"
+        ],
+        [
+          "Frunks",
+          "Damian"
+        ],
+        [
+          "Door's Stapler",
+          "Jaroslaw"
+        ],
+        [
+          "Door's Tugger",
+          "Adrian"
+        ],
+        [
+          "Bahnhof",
+          "Kamil"
+        ],
+        [
+          "Bahnhof",
+          "Tomasz"
+        ],
+        [
+          "Bahnhof",
+          "Maciej"
+        ],
+        [
+          "Sonstiges",
+          "Krzystof"
+        ],
+        [
+          "Sonstiges",
+          "Jakub"
+        ],
+        [
+          "Sonstiges",
+          "Radoslaw"
+        ],
+        [
+          "Sonstiges",
+          "Vazir"
+        ],
+        [
+          "Sonstiges",
+          "Ebrahim"
+        ],
+        [
+          "Sonstiges",
+          "Lukasz"
+        ]
+      ]
     }
   ],
   "feste_positionen": {
