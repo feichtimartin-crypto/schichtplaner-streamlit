@@ -150,7 +150,9 @@
       ]
     }
   ],
-  "feste_positionen": {},
+  "feste_positionen": {
+    "Peter": "Wareneingang"
+  },
   "mindest_besetzung": {
     "Teamlead": 1,
     "S3": 1,
