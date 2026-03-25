@@ -21,18 +21,18 @@ ADMIN_PASSWORD = "Nikolajistcool"
 
 DEFAULT_ARBEITEN = [
     "Teamlead", "S3", "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger",
-    "Wareneingang", "Frunks", "Door's Stapler", "Door's Tugger", "Sonstiges"
+    "WE", "Frunks", "Door's Stapler", "Door's Tugger", "Sonstiges"
 ]
 
 DEFAULT_MIN = {
     "Teamlead": 1, "S3": 1, "Bahnhof": 2, "Bahnhof Stapler": 3,
-    "Bahnhof Tugger": 5, "Wareneingang": 3, "Frunks": 1,
+    "Bahnhof Tugger": 5, "WE": 3, "Frunks": 1,
     "Door's Stapler": 1, "Door's Tugger": 1, "Sonstiges": 0
 }
 
 DEFAULT_MAX = {
     "Teamlead": 2, "S3": 2, "Bahnhof": 4, "Bahnhof Stapler": 3,
-    "Bahnhof Tugger": 5, "Wareneingang": 4, "Frunks": 1,
+    "Bahnhof Tugger": 5, "WE": 4, "Frunks": 1,
     "Door's Stapler": 1, "Door's Tugger": 1, "Sonstiges": 999
 }
 
@@ -40,11 +40,11 @@ FIXE_MITARBEITER = [
     "Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick",
     "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin",
     "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub",
-    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"
+    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Muhamad"
 ]
 
 ARBEITSPLATZ_REIHENFOLGE = [
-    "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger", "Wareneingang",
+    "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger", "WE",
     "Frunks", "Door's Stapler", "Door's Tugger", "Sonstiges", "Teamlead", "S3"
 ]
 
