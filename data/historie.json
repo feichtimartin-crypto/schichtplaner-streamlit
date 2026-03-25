@@ -27,8 +27,8 @@
     "Lukasz",
     "Anna",
     "Klaudia",
-    "Ryzard",
-    "Muhamad"
+    "Muhamad",
+    "Ryzard"
   ],
   "arbeiten": [
     "Teamlead",
@@ -699,7 +699,8 @@
     "Frunks": 1,
     "Door's Stapler": 1,
     "Door's Tugger": 1,
-    "Sonstiges": 0
+    "Sonstiges": 0,
+    "WE": 3
   },
   "max_besetzung": {
     "Teamlead": 2,
@@ -711,6 +712,7 @@
     "Frunks": 1,
     "Door's Stapler": 1,
     "Door's Tugger": 1,
-    "Sonstiges": 999
+    "Sonstiges": 999,
+    "WE": 4
   }
 }
