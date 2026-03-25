@@ -466,6 +466,112 @@
           "Radoslaw"
         ]
       ]
+    },
+    {
+      "type": "MoDi",
+      "date": "2026-03-25",
+      "plan": [
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Teamlead",
+          "Martin"
+        ],
+        [
+          "Teamlead",
+          "Nikolaj"
+        ],
+        [
+          "S3",
+          "Eric"
+        ],
+        [
+          "S3",
+          "Abdullah"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Krzystof"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Jakub"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Radoslaw"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Marcin K."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Daniel"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Damian"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kevin"
+        ],
+        [
+          "Wareneingang",
+          "Tomasz"
+        ],
+        [
+          "Wareneingang",
+          "Maciej"
+        ],
+        [
+          "Frunks",
+          "Monthe"
+        ],
+        [
+          "Door's Stapler",
+          "Patrick"
+        ],
+        [
+          "Door's Tugger",
+          "Jaroslaw"
+        ],
+        [
+          "Bahnhof",
+          "Adrian"
+        ],
+        [
+          "Bahnhof",
+          "Kamil"
+        ],
+        [
+          "Bahnhof",
+          "Ebrahim"
+        ],
+        [
+          "Sonstiges",
+          "Vazir"
+        ],
+        [
+          "Sonstiges",
+          "Lukasz"
+        ]
+      ]
     }
   ],
   "feste_positionen": {
