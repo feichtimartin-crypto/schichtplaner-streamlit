@@ -41,7 +41,114 @@
     "Door's Tugger",
     "Sonstiges"
   ],
-  "eintraege": [],
+  "eintraege": [
+    {
+      "type": "MoDi",
+      "date": "2026-03-25",
+      "plan": [
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Teamlead",
+          "Martin"
+        ],
+        [
+          "Teamlead",
+          "Nikolaj"
+        ],
+        [
+          "S3",
+          "Eric"
+        ],
+        [
+          "S3",
+          "Abdullah"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Monthe"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Patrick"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Marcin K."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Daniel"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Damian"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kevin"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Jaroslaw"
+        ],
+        [
+          "Wareneingang",
+          "Adrian"
+        ],
+        [
+          "Wareneingang",
+          "Kamil"
+        ],
+        [
+          "Frunks",
+          "Tomasz"
+        ],
+        [
+          "Door's Stapler",
+          "Maciej"
+        ],
+        [
+          "Door's Tugger",
+          "Krzystof"
+        ],
+        [
+          "Bahnhof",
+          "Jakub"
+        ],
+        [
+          "Bahnhof",
+          "Radoslaw"
+        ],
+        [
+          "Bahnhof",
+          "Vazir"
+        ],
+        [
+          "Sonstiges",
+          "Ebrahim"
+        ],
+        [
+          "Sonstiges",
+          "Lukasz"
+        ]
+      ]
+    }
+  ],
   "feste_positionen": {
     "Peter": "Wareneingang",
     "Rene": "Wareneingang",
