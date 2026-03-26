@@ -481,6 +481,116 @@
           "Anna"
         ]
       ]
+    },
+    {
+      "type": "MoDi",
+      "date": "2026-03-26",
+      "plan": [
+        [
+          "Teamlead",
+          "Marcin K."
+        ],
+        [
+          "Teamlead",
+          "Daniel"
+        ],
+        [
+          "S3",
+          "Damian"
+        ],
+        [
+          "S3",
+          "Rene"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof Stapler",
+          "Kevin"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Jaroslaw"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Jakub"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Radoslaw"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Vazir"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Ebrahim"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Lukasz"
+        ],
+        [
+          "Wareneingang",
+          "Martin"
+        ],
+        [
+          "Wareneingang",
+          "Nikolaj"
+        ],
+        [
+          "Wareneingang",
+          "Eric"
+        ],
+        [
+          "Wareneingang",
+          "Abdullah"
+        ],
+        [
+          "Frunks",
+          "Monthe"
+        ],
+        [
+          "Door's Stapler",
+          "Fabian"
+        ],
+        [
+          "Door's Tugger",
+          "Patrick"
+        ],
+        [
+          "Bahnhof",
+          "Peter"
+        ],
+        [
+          "Bahnhof",
+          "Tomasz"
+        ],
+        [
+          "Bahnhof",
+          "Maciej"
+        ],
+        [
+          "Bahnhof",
+          "Krzystof"
+        ],
+        [
+          "Sonstiges",
+          "Adrian"
+        ],
+        [
+          "Sonstiges",
+          "Kamil"
+        ],
+        [
+          "Sonstiges",
+          "Anna"
+        ]
+      ]
     }
   ],
   "feste_positionen": {},
