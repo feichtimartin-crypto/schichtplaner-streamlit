@@ -17,7 +17,7 @@ from collections import defaultdict, Counter
 # path  = "data/historie.json"
 # ============================================================
 
-ADMIN_PASSWORD = "Nikolajistcoll"
+ADMIN_PASSWORD = "Nikolajistcool"
 
 DEFAULT_ARBEITEN = [
     "Teamlead", "S3", "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger",
