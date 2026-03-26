@@ -811,6 +811,116 @@
           "Vazir"
         ]
       ]
+    },
+    {
+      "type": "MoDi",
+      "date": "2026-03-26",
+      "plan": [
+        [
+          "Teamlead",
+          "Jaroslaw"
+        ],
+        [
+          "Teamlead",
+          "Adrian"
+        ],
+        [
+          "S3",
+          "Marcin C."
+        ],
+        [
+          "S3",
+          "Kevin"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Radoslaw"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Vazir"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Ebrahim"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Daniel"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Damian"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Rene"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kamil"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Tomasz"
+        ],
+        [
+          "Wareneingang",
+          "Eric"
+        ],
+        [
+          "Wareneingang",
+          "Abdullah"
+        ],
+        [
+          "Wareneingang",
+          "Monthe"
+        ],
+        [
+          "Wareneingang",
+          "Fabian"
+        ],
+        [
+          "Frunks",
+          "Martin"
+        ],
+        [
+          "Door's Stapler",
+          "Nikolaj"
+        ],
+        [
+          "Door's Tugger",
+          "Peter"
+        ],
+        [
+          "Bahnhof",
+          "Patrick"
+        ],
+        [
+          "Bahnhof",
+          "Marcin K."
+        ],
+        [
+          "Bahnhof",
+          "Anna"
+        ],
+        [
+          "Bahnhof",
+          "Maciej"
+        ],
+        [
+          "Sonstiges",
+          "Krzystof"
+        ],
+        [
+          "Sonstiges",
+          "Jakub"
+        ],
+        [
+          "Sonstiges",
+          "Lukasz"
+        ]
+      ]
     }
   ],
   "feste_positionen": {},
