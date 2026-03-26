@@ -273,15 +273,20 @@ def generiere_plan(zeitraum_label):
             zugeteilt_bahnhof.add(person)
 
     # Uebrige kommen zu Sonstiges – aber fair rotiert
-    # Wer zuletzt Sonstiges hatte kommt diesmal als letztes dran
-    restliche_sonstiges = sorted(
-        [p for p in restliche if p not in zugeteilt_bahnhof],
-        key=lambda p: (
-            1 if letzter.get(p) == "Sonstiges" else 0,  # zuletzt Sonstiges → hinten
-            count[p]["Sonstiges"],                        # seltener Sonstiges → vorne
-            gesamt[p]
-        )
-    )
+    # Durchschnitt Sonstiges berechnen
+    kandidaten_sonstiges = [p for p in restliche if p not in zugeteilt_bahnhof]
+    if kandidaten_sonstiges:
+        durchschnitt_sonstiges = sum(count[p]["Sonstiges"] for p in kandidaten_sonstiges) / len(kandidaten_sonstiges)
+    else:
+        durchschnitt_sonstiges = 0
+
+    # Wer mehr als 1x ueber Durchschnitt hat wird zurueckgestellt
+    def sonstiges_score(p):
+        ueber_durchschnitt = 1 if count[p]["Sonstiges"] > durchschnitt_sonstiges + 1 else 0
+        war_zuletzt_da = 1 if letzter.get(p) == "Sonstiges" else 0
+        return (ueber_durchschnitt, war_zuletzt_da, count[p]["Sonstiges"], gesamt[p])
+
+    restliche_sonstiges = sorted(kandidaten_sonstiges, key=sonstiges_score)
 
     # Wie viele Plaetze hat Sonstiges maximal?
     sonstiges_max = data["max_besetzung"].get("Sonstiges", 999)
