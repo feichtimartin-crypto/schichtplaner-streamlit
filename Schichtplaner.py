@@ -557,4 +557,33 @@ with tab3:
     if st.button("Alle Statistikdaten loeschen"):
         data["eintraege"] = []
         save_data(data)
-        st.success("Alle
+        st.success("Alle Statistikdaten geloescht!")
+        st.rerun()
+
+    # Frische Daten direkt von GitHub laden
+    frische_daten = load_data()
+    eintraege = frische_daten.get("eintraege", [])
+
+    cutoff = datetime.now() - timedelta(weeks=8)
+    statistik = defaultdict(lambda: Counter())
+    for eintrag in eintraege:
+        try:
+            d = datetime.strptime(eintrag["date"], "%Y-%m-%d")
+            if d >= cutoff:
+                for item in eintrag["plan"]:
+                    arbeit, person = item[0], item[1]
+                    statistik[person][arbeit] += 1
+        except Exception:
+            pass
+
+    if not statistik:
+        st.info("Noch keine Daten.")
+    else:
+        for person, daten in statistik.items():
+            if person in ["S3", "Teamlead"]:
+                continue
+            st.subheader(f"{person}")
+            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
+            st.bar_chart(df.set_index("Arbeit"))
+            st.dataframe(df, use_container_width=True, hide_index=True)
+    st.markdown("Betrachtungszeitraum: **8 Wochen**")
