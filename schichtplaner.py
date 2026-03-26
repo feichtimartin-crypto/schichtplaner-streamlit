@@ -548,7 +548,7 @@ with tab2:
 
     if data["max_besetzung"]:
         df_max = pd.DataFrame(
-            [(k, v if v != 999 else "unbegrenzt") for k, v in data["max_besetzung"].items()],
+            [(k, str(v) if v != 999 else "unbegrenzt") for k, v in data["max_besetzung"].items()],
             columns=["Arbeit", "Max. Personen"]
         )
         st.dataframe(df_max, width='stretch', hide_index=True)
