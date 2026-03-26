@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import random
 import base64
 import requests
 import pandas as pd
@@ -194,6 +195,9 @@ def generiere_plan(zeitraum_label):
         return None
 
     plan = []
+
+    # Zufaellige Reihenfolge damit nicht immer dieselben zuerst/zuletzt kommen
+    random.shuffle(verfuegbar)
 
     # Feste Positionen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
