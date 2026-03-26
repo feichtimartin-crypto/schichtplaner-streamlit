@@ -41,7 +41,118 @@
     "Door's Tugger",
     "Sonstiges"
   ],
-  "eintraege": [],
+  "eintraege": [
+    {
+      "type": "MoDi",
+      "date": "2026-03-26",
+      "plan": [
+        [
+          "Teamlead",
+          "Martin"
+        ],
+        [
+          "Teamlead",
+          "Nikolaj"
+        ],
+        [
+          "S3",
+          "Abdullah"
+        ],
+        [
+          "S3",
+          "Eric"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Jakub"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Anna"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Marcin K."
+        ],
+        [
+          "Bahnhof Tugger",
+          "Damian"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Krzystof"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kevin"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kamil"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Daniel"
+        ],
+        [
+          "Wareneingang",
+          "Patrick"
+        ],
+        [
+          "Wareneingang",
+          "Maciej"
+        ],
+        [
+          "Frunks",
+          "Adrian"
+        ],
+        [
+          "Door's Stapler",
+          "Monthe"
+        ],
+        [
+          "Door's Tugger",
+          "Vazir"
+        ],
+        [
+          "Bahnhof",
+          "Radoslaw"
+        ],
+        [
+          "Bahnhof",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof",
+          "Lukasz"
+        ],
+        [
+          "Sonstiges",
+          "Jaroslaw"
+        ],
+        [
+          "Sonstiges",
+          "Tomasz"
+        ],
+        [
+          "Sonstiges",
+          "Ebrahim"
+        ]
+      ]
+    }
+  ],
   "feste_positionen": {
     "Martin": "Teamlead",
     "Nikolaj": "Teamlead",
