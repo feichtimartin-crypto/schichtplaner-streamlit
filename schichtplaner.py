@@ -40,7 +40,7 @@ FIXE_MITARBEITER = [
     "Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick",
     "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin",
     "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub",
-    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"
+    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Muhamad"
 ]
 
 ARBEITSPLATZ_REIHENFOLGE = [
@@ -174,6 +174,15 @@ def remove_arbeit(arbeit):
 # Plan-Logik
 # ============================================================
 
+def letzter_arbeitsplatz(person):
+    """Gibt den zuletzt gespeicherten Arbeitsplatz einer Person zurueck."""
+    for eintrag in reversed(data["eintraege"]):
+        for item in eintrag["plan"]:
+            arbeit, p = item[0], item[1]
+            if p == person:
+                return arbeit
+    return None
+
 def generiere_plan(zeitraum_label):
     mitarbeiter = data["mitarbeiter"]
     arbeiten = data["arbeiten"]
@@ -186,24 +195,37 @@ def generiere_plan(zeitraum_label):
 
     plan = []
 
+    # Feste Positionen zuerst
     for person, arbeit in data.get("feste_positionen", {}).items():
         if person in verfuegbar and arbeit in arbeiten:
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
+    # Historien-Zaehler
     count = defaultdict(lambda: defaultdict(int))
     gesamt = defaultdict(int)
     for e in data["eintraege"]:
-        for arbeit, person in e["plan"]:
+        for item in e["plan"]:
+            arbeit, person = item[0], item[1]
             count[person][arbeit] += 1
             gesamt[person] += 1
 
-    def fairer_kandidat(verfuegbar_liste, arbeit):
-        return sorted(
-            verfuegbar_liste,
-            key=lambda p: (count[p][arbeit], gesamt[p])
-        )[0]
+    # Letzter Arbeitsplatz pro Person (fuer Rotationsvermeidung)
+    letzter = {person: letzter_arbeitsplatz(person) for person in verfuegbar}
 
+    def fairer_kandidat(verfuegbar_liste, arbeit):
+        """
+        Waehlt den fairsten Kandidaten:
+        1. Wer zuletzt NICHT diese Arbeit hatte (Rotation)
+        2. Wer diese Arbeit am seltensten hatte
+        3. Wer insgesamt am wenigsten eingeteilt wurde
+        """
+        def score(p):
+            war_zuletzt_da = 1 if letzter.get(p) == arbeit else 0
+            return (war_zuletzt_da, count[p][arbeit], gesamt[p])
+        return sorted(verfuegbar_liste, key=score)[0]
+
+    # Alle Arbeiten ausser Bahnhof und Sonstiges zuerst besetzen
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -220,26 +242,51 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
+    # Bahnhof besetzen
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_aktuell = len([p for a, p in plan if a == "Bahnhof"])
     bahnhof_frei = max(0, bahnhof_max - bahnhof_aktuell)
 
     restliche = list(verfuegbar)
-    restliche_bahnhof = sorted(restliche, key=lambda p: (count[p]["Bahnhof"], gesamt[p]))
-    zugeteilt = set()
 
-    for person in restliche_bahnhof:
+    # Restliche fair auf Bahnhof und Sonstiges aufteilen
+    # Dabei gilt: wer zuletzt Bahnhof hatte → Sonstiges bevorzugt, und umgekehrt
+    # Sortierung: wer Bahnhof seltener hatte UND zuletzt nicht Bahnhof war → Bahnhof
+    restliche_sortiert = sorted(
+        restliche,
+        key=lambda p: (
+            1 if letzter.get(p) == "Bahnhof" else 0,  # zuletzt Bahnhof → hinten
+            count[p]["Bahnhof"],                        # seltener Bahnhof → vorne
+            gesamt[p]
+        )
+    )
+
+    zugeteilt_bahnhof = set()
+    for person in restliche_sortiert:
         if bahnhof_frei > 0:
             plan.append(("Bahnhof", person))
             bahnhof_frei -= 1
-            zugeteilt.add(person)
+            zugeteilt_bahnhof.add(person)
 
+    # Uebrige kommen zu Sonstiges – aber fair rotiert
+    # Wer zuletzt Sonstiges hatte kommt diesmal als letztes dran
     restliche_sonstiges = sorted(
-        [p for p in restliche if p not in zugeteilt],
-        key=lambda p: (count[p]["Sonstiges"], gesamt[p])
+        [p for p in restliche if p not in zugeteilt_bahnhof],
+        key=lambda p: (
+            1 if letzter.get(p) == "Sonstiges" else 0,  # zuletzt Sonstiges → hinten
+            count[p]["Sonstiges"],                        # seltener Sonstiges → vorne
+            gesamt[p]
+        )
     )
+
+    # Wie viele Plaetze hat Sonstiges maximal?
+    sonstiges_max = data["max_besetzung"].get("Sonstiges", 999)
+    sonstiges_aktuell = 0
+
     for person in restliche_sonstiges:
-        plan.append(("Sonstiges", person))
+        if sonstiges_aktuell < sonstiges_max:
+            plan.append(("Sonstiges", person))
+            sonstiges_aktuell += 1
 
     return {
         "type": zeitraum_label,
@@ -247,9 +294,10 @@ def generiere_plan(zeitraum_label):
         "plan": plan
     }
 
-def plan_speichern(plan):
+def plan_speichern(plan, key):
     data["eintraege"].append(plan)
     save_data(data)
+    st.session_state[f"{key}_gespeichert"] = True
 
 def get_recent_entries(weeks=8):
     cutoff = datetime.now() - timedelta(weeks=weeks)
@@ -267,7 +315,8 @@ def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
     statistik = defaultdict(lambda: Counter())
     for eintrag in zeitraum:
-        for arbeit, person in eintrag["plan"]:
+        for item in eintrag["plan"]:
+            arbeit, person = item[0], item[1]
             statistik[person][arbeit] += 1
     return statistik
 
@@ -283,36 +332,39 @@ def zeige_plan_mit_tausch(plan, key):
     })
     st.dataframe(df_expanded, use_container_width=True, hide_index=True)
 
-    st.markdown("**Zwei Mitarbeiter tauschen:**")
-    alle_personen = sorted(set(person for _, person in plan["plan"]))
+    bereits_gespeichert = st.session_state.get(f"{key}_gespeichert", False)
 
-    c1, c2, c3 = st.columns([2, 2, 1])
-    with c1:
-        ma1 = st.selectbox("Mitarbeiter A", ["-"] + alle_personen, key=f"tausch_a_{key}")
-    with c2:
-        ma2 = st.selectbox("Mitarbeiter B", ["-"] + alle_personen, key=f"tausch_b_{key}")
-    with c3:
-        st.write("")
-        st.write("")
-        tausch_btn = st.button("Tauschen", key=f"tausch_btn_{key}")
+    if not bereits_gespeichert:
+        st.markdown("**Zwei Mitarbeiter tauschen:**")
+        alle_personen = sorted(set(person for _, person in plan["plan"]))
 
-    if tausch_btn:
-        if ma1 == "-" or ma2 == "-":
-            st.warning("Bitte beide Mitarbeiter auswaehlen.")
-        elif ma1 == ma2:
-            st.warning("Bitte zwei verschiedene Mitarbeiter auswaehlen.")
-        else:
-            neuer_plan = []
-            for arbeit, person in plan["plan"]:
-                if person == ma1:
-                    neuer_plan.append((arbeit, ma2))
-                elif person == ma2:
-                    neuer_plan.append((arbeit, ma1))
-                else:
-                    neuer_plan.append((arbeit, person))
-            plan["plan"] = neuer_plan
-            st.success(f"{ma1} und {ma2} wurden getauscht!")
-            st.rerun()
+        c1, c2, c3 = st.columns([2, 2, 1])
+        with c1:
+            ma1 = st.selectbox("Mitarbeiter A", ["-"] + alle_personen, key=f"tausch_a_{key}")
+        with c2:
+            ma2 = st.selectbox("Mitarbeiter B", ["-"] + alle_personen, key=f"tausch_b_{key}")
+        with c3:
+            st.write("")
+            st.write("")
+            tausch_btn = st.button("Tauschen", key=f"tausch_btn_{key}")
+
+        if tausch_btn:
+            if ma1 == "-" or ma2 == "-":
+                st.warning("Bitte beide Mitarbeiter auswaehlen.")
+            elif ma1 == ma2:
+                st.warning("Bitte zwei verschiedene Mitarbeiter auswaehlen.")
+            else:
+                neuer_plan = []
+                for arbeit, person in plan["plan"]:
+                    if person == ma1:
+                        neuer_plan.append((arbeit, ma2))
+                    elif person == ma2:
+                        neuer_plan.append((arbeit, ma1))
+                    else:
+                        neuer_plan.append((arbeit, person))
+                plan["plan"] = neuer_plan
+                st.success(f"{ma1} und {ma2} wurden getauscht!")
+                st.rerun()
 
     return plan
 
@@ -359,12 +411,14 @@ with tab1:
             plan = generiere_plan("MoDi")
             if plan:
                 st.session_state["plan_modi"] = plan
+                st.session_state["plan_modi_gespeichert"] = False
                 st.success("Plan Mo/Di erstellt!")
     with c2:
         if st.button("Plan Mi-Fr erstellen"):
             plan = generiere_plan("MiFr")
             if plan:
                 st.session_state["plan_mifr"] = plan
+                st.session_state["plan_mifr_gespeichert"] = False
                 st.success("Plan Mi-Fr erstellt!")
 
     st.divider()
@@ -372,12 +426,25 @@ with tab1:
         plan = st.session_state.get(key, None)
         if plan:
             st.subheader(f"Plan {zeitraum_label}")
+            bereits_gespeichert = st.session_state.get(f"{key}_gespeichert", False)
+
             aktualisierter_plan = zeige_plan_mit_tausch(plan, key)
             st.session_state[key] = aktualisierter_plan
+
             st.divider()
-            if st.button(f"Speichern {zeitraum_label}", key=f"save_{key}"):
-                plan_speichern(st.session_state[key])
-                st.success(f"Plan fuer {zeitraum_label} gespeichert!")
+
+            if bereits_gespeichert:
+                st.success("Plan wurde bereits gespeichert. Bitte neuen Plan generieren.")
+                st.button(
+                    f"Speichern {zeitraum_label} (bereits gespeichert)",
+                    key=f"save_{key}",
+                    disabled=True
+                )
+            else:
+                if st.button(f"Speichern {zeitraum_label}", key=f"save_{key}"):
+                    plan_speichern(st.session_state[key], key)
+                    st.success(f"Plan fuer {zeitraum_label} gespeichert!")
+                    st.rerun()
         else:
             st.info(f"Kein Plan fuer {zeitraum_label} generiert.")
 
@@ -490,18 +557,4 @@ with tab3:
     if st.button("Alle Statistikdaten loeschen"):
         data["eintraege"] = []
         save_data(data)
-        st.success("Alle Statistikdaten geloescht!")
-        st.rerun()
-
-    stats = statistik_wochen(8)
-    if not stats:
-        st.info("Noch keine Daten.")
-    else:
-        for person, daten in stats.items():
-            if person in ["S3", "Teamlead"]:
-                continue
-            st.subheader(f"{person}")
-            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-            st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
-    st.markdown("Betrachtungszeitraum: **8 Wochen**")
+        st.success("Alle
