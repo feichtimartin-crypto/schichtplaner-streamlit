@@ -339,7 +339,7 @@ def zeige_plan_mit_tausch(plan, key):
         a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
         for a in df_grouped.index
     })
-    st.dataframe(df_expanded, use_container_width=True, hide_index=True)
+    st.dataframe(df_expanded, width='stretch', hide_index=True)
 
     bereits_gespeichert = st.session_state.get(f"{key}_gespeichert", False)
 
@@ -506,7 +506,7 @@ with tab2:
 
     if data["feste_positionen"]:
         df_fix = pd.DataFrame(data["feste_positionen"].items(), columns=["Mitarbeiter", "Arbeit"])
-        st.dataframe(df_fix, use_container_width=True, hide_index=True)
+        st.dataframe(df_fix, width='stretch', hide_index=True)
         if st.button("Alle Fixierungen loeschen"):
             data["feste_positionen"].clear()
             save_data(data)
@@ -527,7 +527,7 @@ with tab2:
 
     if data["mindest_besetzung"]:
         df_min = pd.DataFrame(data["mindest_besetzung"].items(), columns=["Arbeit", "Min. Personen"])
-        st.dataframe(df_min, use_container_width=True, hide_index=True)
+        st.dataframe(df_min, width='stretch', hide_index=True)
         if st.button("Alle loeschen", key="del_min"):
             data["mindest_besetzung"].clear()
             save_data(data)
@@ -551,7 +551,7 @@ with tab2:
             [(k, v if v != 999 else "unbegrenzt") for k, v in data["max_besetzung"].items()],
             columns=["Arbeit", "Max. Personen"]
         )
-        st.dataframe(df_max, use_container_width=True, hide_index=True)
+        st.dataframe(df_max, width='stretch', hide_index=True)
         if st.button("Alle loeschen", key="del_max"):
             data["max_besetzung"].clear()
             save_data(data)
@@ -594,5 +594,5 @@ with tab3:
             st.subheader(f"{person}")
             df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
             st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width='stretch', hide_index=True)
     st.markdown("Betrachtungszeitraum: **8 Wochen**")
