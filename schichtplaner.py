@@ -557,4 +557,4 @@ with tab3:
     if st.button("Alle Statistikdaten loeschen"):
         data["eintraege"] = []
         save_data(data)
-        st.success("Alle
+        st.success("Alle")
