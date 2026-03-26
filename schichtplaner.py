@@ -177,7 +177,8 @@ def remove_arbeit(arbeit):
 def letzter_arbeitsplatz(person):
     """Gibt den zuletzt gespeicherten Arbeitsplatz einer Person zurueck."""
     for eintrag in reversed(data["eintraege"]):
-        for arbeit, p in eintrag["plan"]:
+        for item in eintrag["plan"]:
+            arbeit, p = item[0], item[1]
             if p == person:
                 return arbeit
     return None
@@ -204,7 +205,8 @@ def generiere_plan(zeitraum_label):
     count = defaultdict(lambda: defaultdict(int))
     gesamt = defaultdict(int)
     for e in data["eintraege"]:
-        for arbeit, person in e["plan"]:
+        for item in e["plan"]:
+            arbeit, person = item[0], item[1]
             count[person][arbeit] += 1
             gesamt[person] += 1
 
@@ -313,7 +315,8 @@ def statistik_wochen(weeks=8):
     zeitraum = get_recent_entries(weeks)
     statistik = defaultdict(lambda: Counter())
     for eintrag in zeitraum:
-        for arbeit, person in eintrag["plan"]:
+        for item in eintrag["plan"]:
+            arbeit, person = item[0], item[1]
             statistik[person][arbeit] += 1
     return statistik
 
@@ -554,9 +557,4 @@ with tab3:
     if st.button("Alle Statistikdaten loeschen"):
         data["eintraege"] = []
         save_data(data)
-        st.success("Alle Statistikdaten geloescht!")
-        st.rerun()
-
-    stats = statistik_wochen(8)
-    if not stats:
-        s
+        st.success("Alle
