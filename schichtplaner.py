@@ -200,7 +200,7 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Historien-Zaehler: wie oft hatte jede Person welche Arbeit
+    # Historien-Zaehler
     count = defaultdict(lambda: defaultdict(int))
     gesamt = defaultdict(int)
     for e in data["eintraege"]:
@@ -208,13 +208,13 @@ def generiere_plan(zeitraum_label):
             count[person][arbeit] += 1
             gesamt[person] += 1
 
-    # Letzter Arbeitsplatz pro Person (fuer Rotation)
+    # Letzter Arbeitsplatz pro Person (fuer Rotationsvermeidung)
     letzter = {person: letzter_arbeitsplatz(person) for person in verfuegbar}
 
     def fairer_kandidat(verfuegbar_liste, arbeit):
         """
         Waehlt den fairsten Kandidaten:
-        1. Wer zuletzt NICHT diese Arbeit hatte (Rotation – nie hintereinander)
+        1. Wer zuletzt NICHT diese Arbeit hatte (Rotation)
         2. Wer diese Arbeit am seltensten hatte
         3. Wer insgesamt am wenigsten eingeteilt wurde
         """
@@ -223,7 +223,7 @@ def generiere_plan(zeitraum_label):
             return (war_zuletzt_da, count[p][arbeit], gesamt[p])
         return sorted(verfuegbar_liste, key=score)[0]
 
-    # Alle Arbeiten ausser Bahnhof/Sonstiges fair verteilen
+    # Alle Arbeiten ausser Bahnhof und Sonstiges zuerst besetzen
     for arbeit in arbeiten:
         if arbeit in ["Bahnhof", "Sonstiges"]:
             continue
@@ -240,30 +240,51 @@ def generiere_plan(zeitraum_label):
             plan.append((arbeit, person))
             verfuegbar.remove(person)
 
-    # Bahnhof & Sonstiges fuer Uebrige
+    # Bahnhof besetzen
     bahnhof_max = data["max_besetzung"].get("Bahnhof", 4)
     bahnhof_aktuell = len([p for a, p in plan if a == "Bahnhof"])
     bahnhof_frei = max(0, bahnhof_max - bahnhof_aktuell)
 
     restliche = list(verfuegbar)
-    restliche_bahnhof = sorted(
-        restliche,
-        key=lambda p: (1 if letzter.get(p) == "Bahnhof" else 0, count[p]["Bahnhof"], gesamt[p])
-    )
-    zugeteilt = set()
 
-    for person in restliche_bahnhof:
+    # Restliche fair auf Bahnhof und Sonstiges aufteilen
+    # Dabei gilt: wer zuletzt Bahnhof hatte → Sonstiges bevorzugt, und umgekehrt
+    # Sortierung: wer Bahnhof seltener hatte UND zuletzt nicht Bahnhof war → Bahnhof
+    restliche_sortiert = sorted(
+        restliche,
+        key=lambda p: (
+            1 if letzter.get(p) == "Bahnhof" else 0,  # zuletzt Bahnhof → hinten
+            count[p]["Bahnhof"],                        # seltener Bahnhof → vorne
+            gesamt[p]
+        )
+    )
+
+    zugeteilt_bahnhof = set()
+    for person in restliche_sortiert:
         if bahnhof_frei > 0:
             plan.append(("Bahnhof", person))
             bahnhof_frei -= 1
-            zugeteilt.add(person)
+            zugeteilt_bahnhof.add(person)
 
+    # Uebrige kommen zu Sonstiges – aber fair rotiert
+    # Wer zuletzt Sonstiges hatte kommt diesmal als letztes dran
     restliche_sonstiges = sorted(
-        [p for p in restliche if p not in zugeteilt],
-        key=lambda p: (1 if letzter.get(p) == "Sonstiges" else 0, count[p]["Sonstiges"], gesamt[p])
+        [p for p in restliche if p not in zugeteilt_bahnhof],
+        key=lambda p: (
+            1 if letzter.get(p) == "Sonstiges" else 0,  # zuletzt Sonstiges → hinten
+            count[p]["Sonstiges"],                        # seltener Sonstiges → vorne
+            gesamt[p]
+        )
     )
+
+    # Wie viele Plaetze hat Sonstiges maximal?
+    sonstiges_max = data["max_besetzung"].get("Sonstiges", 999)
+    sonstiges_aktuell = 0
+
     for person in restliche_sonstiges:
-        plan.append(("Sonstiges", person))
+        if sonstiges_aktuell < sonstiges_max:
+            plan.append(("Sonstiges", person))
+            sonstiges_aktuell += 1
 
     return {
         "type": zeitraum_label,
@@ -274,7 +295,6 @@ def generiere_plan(zeitraum_label):
 def plan_speichern(plan, key):
     data["eintraege"].append(plan)
     save_data(data)
-    # Plan als gespeichert markieren
     st.session_state[f"{key}_gespeichert"] = True
 
 def get_recent_entries(weeks=8):
@@ -309,7 +329,6 @@ def zeige_plan_mit_tausch(plan, key):
     })
     st.dataframe(df_expanded, use_container_width=True, hide_index=True)
 
-    # Tausch nur erlaubt wenn noch nicht gespeichert
     bereits_gespeichert = st.session_state.get(f"{key}_gespeichert", False)
 
     if not bereits_gespeichert:
@@ -540,13 +559,4 @@ with tab3:
 
     stats = statistik_wochen(8)
     if not stats:
-        st.info("Noch keine Daten.")
-    else:
-        for person, daten in stats.items():
-            if person in ["S3", "Teamlead"]:
-                continue
-            st.subheader(f"{person}")
-            df = pd.DataFrame(list(daten.items()), columns=["Arbeit", "Anzahl"])
-            st.bar_chart(df.set_index("Arbeit"))
-            st.dataframe(df, use_container_width=True, hide_index=True)
-    st.markdown("Betrachtungszeitraum: **8 Wochen**")
+        s
