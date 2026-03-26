@@ -17,7 +17,7 @@ from collections import defaultdict, Counter
 # path  = "data/historie.json"
 # ============================================================
 
-ADMIN_PASSWORD = "Nikolajistcool"
+ADMIN_PASSWORD = "Nikolajistcoll"
 
 DEFAULT_ARBEITEN = [
     "Teamlead", "S3", "Bahnhof", "Bahnhof Stapler", "Bahnhof Tugger",
@@ -40,7 +40,7 @@ FIXE_MITARBEITER = [
     "Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick",
     "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin",
     "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub",
-    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Muhamad"
+    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"
 ]
 
 ARBEITSPLATZ_REIHENFOLGE = [
@@ -271,6 +271,51 @@ def statistik_wochen(weeks=8):
             statistik[person][arbeit] += 1
     return statistik
 
+def zeige_plan_mit_tausch(plan, key):
+    """Zeigt den Plan als Tabelle und bietet darunter eine Tausch-Funktion an."""
+    df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
+    df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(ARBEITSPLATZ_REIHENFOLGE)
+    df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
+    max_len = df_grouped.apply(len).max()
+    df_expanded = pd.DataFrame({
+        a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
+        for a in df_grouped.index
+    })
+    st.dataframe(df_expanded, use_container_width=True, hide_index=True)
+
+    st.markdown("**Zwei Mitarbeiter tauschen:**")
+    alle_personen = sorted(set(person for _, person in plan["plan"]))
+
+    c1, c2, c3 = st.columns([2, 2, 1])
+    with c1:
+        ma1 = st.selectbox("Mitarbeiter A", ["-"] + alle_personen, key=f"tausch_a_{key}")
+    with c2:
+        ma2 = st.selectbox("Mitarbeiter B", ["-"] + alle_personen, key=f"tausch_b_{key}")
+    with c3:
+        st.write("")
+        st.write("")
+        tausch_btn = st.button("Tauschen", key=f"tausch_btn_{key}")
+
+    if tausch_btn:
+        if ma1 == "-" or ma2 == "-":
+            st.warning("Bitte beide Mitarbeiter auswaehlen.")
+        elif ma1 == ma2:
+            st.warning("Bitte zwei verschiedene Mitarbeiter auswaehlen.")
+        else:
+            neuer_plan = []
+            for arbeit, person in plan["plan"]:
+                if person == ma1:
+                    neuer_plan.append((arbeit, ma2))
+                elif person == ma2:
+                    neuer_plan.append((arbeit, ma1))
+                else:
+                    neuer_plan.append((arbeit, person))
+            plan["plan"] = neuer_plan
+            st.success(f"{ma1} und {ma2} wurden getauscht!")
+            st.rerun()
+
+    return plan
+
 # ============================================================
 # Streamlit UI
 # ============================================================
@@ -327,17 +372,11 @@ with tab1:
         plan = st.session_state.get(key, None)
         if plan:
             st.subheader(f"Plan {zeitraum_label}")
-            df = pd.DataFrame(plan["plan"], columns=["Arbeit", "Mitarbeiter"])
-            df_grouped = df.groupby("Arbeit")["Mitarbeiter"].apply(list).reindex(ARBEITSPLATZ_REIHENFOLGE)
-            df_grouped = df_grouped.apply(lambda x: x if isinstance(x, list) else [])
-            max_len = df_grouped.apply(len).max()
-            df_expanded = pd.DataFrame({
-                a: df_grouped[a] + [""] * (max_len - len(df_grouped[a]))
-                for a in df_grouped.index
-            })
-            st.dataframe(df_expanded, use_container_width=True, hide_index=True)
-            if st.button(f"Speichern {zeitraum_label}"):
-                plan_speichern(plan)
+            aktualisierter_plan = zeige_plan_mit_tausch(plan, key)
+            st.session_state[key] = aktualisierter_plan
+            st.divider()
+            if st.button(f"Speichern {zeitraum_label}", key=f"save_{key}"):
+                plan_speichern(st.session_state[key])
                 st.success(f"Plan fuer {zeitraum_label} gespeichert!")
         else:
             st.info(f"Kein Plan fuer {zeitraum_label} generiert.")
