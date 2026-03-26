@@ -40,7 +40,7 @@ FIXE_MITARBEITER = [
     "Martin", "Nikolaj", "Eric", "Abdullah", "Monthe", "Fabian", "Patrick",
     "Peter", "Marcin K.", "Daniel", "Damian", "Rene", "Marcin C.", "Kevin",
     "Jaroslaw", "Adrian", "Kamil", "Tomasz", "Maciej", "Krzystof", "Jakub",
-    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Ryzard", "Muhamad"
+    "Radoslaw", "Vazir", "Ebrahim", "Lukasz", "Anna", "Klaudia", "Muhamad"
 ]
 
 ARBEITSPLATZ_REIHENFOLGE = [
