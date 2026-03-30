@@ -42,7 +42,9 @@
     "Sonstiges"
   ],
   "eintraege": [],
-  "feste_positionen": {},
+  "feste_positionen": {
+    "Martin": "Teamlead"
+  },
   "mindest_besetzung": {
     "Teamlead": 1,
     "S3": 1,
