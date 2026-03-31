@@ -41,7 +41,114 @@
     "Door's Tugger",
     "Sonstiges"
   ],
-  "eintraege": [],
+  "eintraege": [
+    {
+      "type": "MiFr",
+      "date": "2026-03-31",
+      "plan": [
+        [
+          "Teamlead",
+          "Martin"
+        ],
+        [
+          "Teamlead",
+          "Nikolaj"
+        ],
+        [
+          "S3",
+          "Eric"
+        ],
+        [
+          "S3",
+          "Abdullah"
+        ],
+        [
+          "Wareneingang",
+          "Rene"
+        ],
+        [
+          "Wareneingang",
+          "Peter"
+        ],
+        [
+          "Bahnhof",
+          "Fabian"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Marcin C."
+        ],
+        [
+          "Bahnhof Stapler",
+          "Vazir"
+        ],
+        [
+          "Bahnhof Stapler",
+          "Patrick"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Kevin"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Maciej"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Lukasz"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Monthe"
+        ],
+        [
+          "Bahnhof Tugger",
+          "Marcin K."
+        ],
+        [
+          "Wareneingang",
+          "Radoslaw"
+        ],
+        [
+          "Wareneingang",
+          "Jaroslaw"
+        ],
+        [
+          "Frunks",
+          "Kamil"
+        ],
+        [
+          "Door's Stapler",
+          "Jakub"
+        ],
+        [
+          "Door's Tugger",
+          "Anna"
+        ],
+        [
+          "Bahnhof",
+          "Krzystof"
+        ],
+        [
+          "Bahnhof",
+          "Damian"
+        ],
+        [
+          "Bahnhof",
+          "Ebrahim"
+        ],
+        [
+          "Sonstiges",
+          "Daniel"
+        ],
+        [
+          "Sonstiges",
+          "Adrian"
+        ]
+      ]
+    }
+  ],
   "feste_positionen": {
     "Martin": "Teamlead",
     "Nikolaj": "Teamlead",
